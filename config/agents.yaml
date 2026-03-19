@@ -1,0 +1,82 @@
+defaults:
+  model: claude-sonnet-4-6
+  max_turns: 30
+
+orchestrator:
+  model: claude-opus-4-6
+  max_turns: 50
+  allowed_tools:
+    - Agent
+    - Glob
+    - Grep
+    - Read
+    - Bash
+    - WebSearch
+
+planner:
+  model: claude-sonnet-4-6
+  max_turns: 20
+  allowed_tools:
+    - WebSearch
+    - WebFetch
+    - Read
+    - Glob
+
+frontend:
+  model: claude-sonnet-4-6
+  max_turns: 30
+  allowed_tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+
+backend:
+  model: claude-sonnet-4-6
+  max_turns: 30
+  allowed_tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - WebSearch
+
+database:
+  model: claude-sonnet-4-6
+  max_turns: 20
+  allowed_tools:
+    - Read
+    - Write
+    - Bash
+    - Glob
+    - WebSearch
+    # Uncomment to enable direct Supabase migration (requires MCP access):
+    # - mcp__supabase-my-web-project__apply_migration
+    # - mcp__supabase-my-web-project__execute_sql
+    # - mcp__supabase-my-web-project__list_tables
+    # - mcp__supabase-my-web-project__list_migrations
+
+design:
+  model: claude-haiku-4-5-20251001
+  max_turns: 20
+  allowed_tools:
+    - Read
+    - Write
+    - WebSearch
+    - WebFetch
+    - Glob
+
+qa:
+  model: claude-opus-4-6
+  max_turns: 30
+  allowed_tools:
+    - Read
+    - Write
+    - Bash
+    - Glob
+    - Grep
+    - WebSearch

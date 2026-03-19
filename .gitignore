@@ -1,0 +1,13 @@
+# MCP configuration (contains tokens)
+.mcp.json
+.claude/
+
+# Environment variables (API keys)
+.env
+.env.local
+.env*.local
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
