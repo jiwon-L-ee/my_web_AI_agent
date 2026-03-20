@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<script>
+  if (!sessionStorage.getItem('matbulIntroSeen')) {
+    location.replace('infographic.html');
+  }
+</script>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>맞불 — 홈</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="intro">
+  <div class="intro-logo">
+    <svg width="90" height="120" viewBox="0 0 18 24" fill="none" aria-hidden="true">
+      <defs><linearGradient id="lgIntro" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs>
+      <path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgIntro)"/>
+    </svg>
+    <span class="intro-logo-text">맞불</span>
+  </div>
+  <div class="intro-bar"><div class="intro-bar-fill"></div></div>
+  <div class="intro-sub">사소한 고집의 끝</div>
+</div>
+
+<script>
+(function() {
+  if (sessionStorage.getItem('introSeen')) {
+    document.getElementById('intro').style.display = 'none';
+    return;
+  }
+  setTimeout(function() {
+    var el = document.getElementById('intro');
+    el.classList.add('hide');
+    el.addEventListener('animationend', function() {
+      el.style.display = 'none';
+      sessionStorage.setItem('introSeen', '1');
+    }, { once: true });
+  }, 2200);
+})();
+</script>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg class="logo-flame-sm" width="18" height="24" viewBox="0 0 18 24" fill="none" aria-hidden="true"><defs><linearGradient id="lgNav" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgNav)"/></svg>
+      <span class="logo-wordmark">맞불</span>
+    </a>
+    <div class="nav-cats">
+      <a href="index.html" class="cat-btn" data-cat="">전체</a>
+      <a href="index.html?cat=밸런스게임" class="cat-btn" data-cat="밸런스게임">밸런스게임</a>
+      <a href="index.html?cat=OX퀴즈" class="cat-btn" data-cat="OX퀴즈">OX퀴즈</a>
+      <a href="index.html?cat=테스트" class="cat-btn" data-cat="테스트">테스트</a>
+    </div>
+    <!-- 모바일용 카테고리 셀렉트 (768px 이하에서만 표시) -->
+    <select class="cat-select-mobile" id="catSelectMobile" aria-label="카테고리 선택">
+      <option value="">전체</option>
+      <option value="밸런스게임">밸런스게임</option>
+      <option value="OX퀴즈">OX퀴즈</option>
+      <option value="테스트">테스트</option>
+    </select>
+    <div class="nav-auth" id="navAuth">
+      <a href="login.html" class="btn-login">로그인</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="sort-bar">
+    <button class="sort-btn active" data-sort="created_at">최신순</button>
+    <button class="sort-btn" data-sort="view_count">인기순</button>
+  </div>
+
+  <div class="card-grid" id="cardGrid">
+    <div style="grid-column:1/-1"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+  </div>
+
+  <div id="pagination" class="pagination"></div>
+</div>
+
+<!-- ── Vote Modal ── -->
+<div class="vm-overlay hidden" id="voteModal" role="dialog" aria-modal="true" aria-labelledby="vmTitle">
+  <div class="vm-wrap">
+    <div class="vm-box">
+      <button class="vm-close" id="vmClose" aria-label="닫기">✕</button>
+
+      <div class="vm-head">
+        <div class="vm-head-cat" id="vmCatBadge"></div>
+        <div class="vm-head-title" id="vmTitle">로딩 중...</div>
+      </div>
+
+      <!-- Pre-vote arena -->
+      <div class="vm-arena" id="vmArena">
+        <div class="vm-panel vm-panel-a" id="vmPanelA" role="button" tabindex="0" data-choice="A" aria-label="A 투표">
+          <div class="vm-panel-tag">A 진영</div>
+          <div class="vm-panel-opt" id="vmOptA"></div>
+          <div class="vm-panel-check" aria-hidden="true">✓</div>
+        </div>
+        <div class="vm-center-vs">
+          <div class="vm-vs-circle">VS</div>
+        </div>
+        <div class="vm-panel vm-panel-b" id="vmPanelB" role="button" tabindex="0" data-choice="B" aria-label="B 투표">
+          <div class="vm-panel-tag">B 진영</div>
+          <div class="vm-panel-opt" id="vmOptB"></div>
+          <div class="vm-panel-check" aria-hidden="true">✓</div>
+        </div>
+      </div>
+      <p class="vm-hint" id="vmHint">진영을 선택하세요</p>
+
+      <!-- Post-vote result -->
+      <div class="vm-result" id="vmResult" style="display:none">
+        <div class="vm-result-bar-wrap">
+          <div class="vm-bar-a" id="vmBarA" style="width:50%"></div>
+          <div class="vm-bar-b" id="vmBarB" style="width:50%"></div>
+        </div>
+        <div class="vm-result-counts">
+          <span id="vmCountA">0표</span>
+          <span id="vmCountB">0표</span>
+        </div>
+
+        <div class="vm-best-title">진영별 베스트 주장</div>
+        <div class="vm-best-grid">
+          <div class="vm-best-card vm-best-card-a">
+            <div class="vm-best-card-label">🔵 A 진영 베스트</div>
+            <div id="vmBestA"></div>
+            <div class="vm-best-card-author" id="vmBestAAuthor"></div>
+          </div>
+          <div class="vm-best-card vm-best-card-b">
+            <div class="vm-best-card-label">🟠 B 진영 베스트</div>
+            <div id="vmBestB"></div>
+            <div class="vm-best-card-author" id="vmBestBAuthor"></div>
+          </div>
+        </div>
+
+        <a class="vm-full-btn" id="vmFullLink" href="#">
+          전체 댓글 보기 →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/vote-modal.js"></script>
+<script src="js/home.js"></script>
+</body>
+</html>

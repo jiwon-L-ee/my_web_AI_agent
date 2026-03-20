@@ -39,37 +39,110 @@ python main.py --task "로그인 페이지 만들어줘"
 
 ---
 
-## 얼굴상 분석 웹사이트
+## 맞불 플랫폼 (platform/)
 
-Teachable Machine 모델을 활용한 정적 웹사이트. 얼굴 사진을 업로드하면 아랍상/두부상을 AI로 판정합니다.
+토론·밸런스게임·OX퀴즈를 공유하는 커뮤니티 플랫폼. 슬로건: "사소한 고집의 끝". 정적 HTML/CSS/JS + Supabase 백엔드.
+
+### 진입 플로우
+
+```
+루트 index.html
+  ├─ 첫 방문 (sessionStorage.matbulIntroSeen 없음) → platform/infographic.html
+  └─ 재방문 → platform/index.html
+infographic.html 로드 시 matbulIntroSeen 세팅
+QA/개발: http://localhost:8080/?reset 으로 플래그 초기화 후 인포그래픽 재확인 가능
+```
+
+- **직접 접근 우회 방지**: `platform/index.html` 상단 (DOCTYPE 이전)에 sessionStorage 체크 삽입
+  ```html
+  <!DOCTYPE html>
+  <script>
+    if (!sessionStorage.getItem('matbulIntroSeen')) {
+      location.replace('infographic.html');
+    }
+  </script>
+  <html lang="ko">
+  ```
+  → `platform/` URL 직접 접근 시에도 인포그래픽이 먼저 표시됨
 
 ### 파일 구조
 
 ```
-index.html       — 메인 페이지 (CDN 로드, 업로드 UI, 결과 섹션)
-css/style.css    — 다크 테마 스타일 (드래그 피드백, 결과 카드, 신뢰도 바)
-js/app.js        — 모델 로드 및 예측 로직
+platform/
+├── infographic.html    — 맞불 소개 인트로 페이지 (첫 방문 시 표시)
+├── index.html / login.html / create.html / post.html / mypage.html / profile.html
+├── css/style.css       — 다크 테마 (CSS 변수 기반, --bg, --surface, --accent 등)
+└── js/
+    ├── supabase.js     — Supabase 클라이언트 초기화 (window.db)
+    ├── auth.js         — getUser, requireAuth, signInWithGoogle, escapeHtml, relativeTime, safeRedirectUrl
+    ├── home.js         — 카드 그리드, 카테고리 필터, 정렬, 페이지네이션
+    ├── create.js       — 게시물 작성, 썸네일 업로드, toggleCategoryFields()
+    ├── post.js         — 투표/테스트 플레이어 조건부 렌더링, 좋아요, 댓글 CRUD
+    ├── mypage.js       — 통계 집계, 내 게시물 관리
+    └── profile.js      — 타인 프로필, 팔로우 토글
 ```
 
-### 모델 정보
+### Supabase 구성
 
-- **URL**: `https://teachablemachine.withgoogle.com/models/id9fnVeCr/`
-- **클래스**: 아랍상, 두부상 (이진 분류)
-- **라이브러리**: TensorFlow.js + `@teachablemachine/image` (CDN)
+- **프로젝트 URL**: `https://mwsfzxhblboskdlffsxi.supabase.co`
+- **테이블**: profiles, posts, likes, comments, follows, votes (RLS 활성화)
+- **Storage**: thumbnails 버킷 (public)
+- **DB 함수**: `increment_view_count(post_id uuid)` — RPC로 조회수 증가
+- **트리거**: `on_auth_user_created` — 구글 로그인 시 profiles 자동 생성
+- **마이그레이션**: `supabase/migrations/20260319_create_platform_tables.sql`, `20260320_balance_game.sql`
 
 ### 실행 방법
 
-`index.html`을 브라우저에서 직접 열기 (별도 서버 불필요)
+```
+python -m http.server 8080
+→ http://localhost:8080/         첫 방문: 인포그래픽 → 플랫폼
+→ http://localhost:8080/?reset   인포그래픽 재확인 (QA용)
+→ http://localhost:8080/platform/ 플랫폼 직접 접근
+file:// 불가 — OAuth 미지원
+```
 
-### 클래스별 설명
+### Google OAuth 설정 (미완료 시)
 
-- **아랍상**: 뚜렷하고 강한 이목구비, 높은 콧대, 짙은 눈썹, 이국적인 매력
-- **두부상**: 사각형에 가까운 얼굴형, 넓은 이마, 안정적이고 신뢰감 있는 인상
+Supabase Dashboard → Auth → Providers → Google → Client ID/Secret 입력
+→ login.html의 `#setupNotice` div 제거
 
-### 주요 구현
+### 카테고리
 
-- 드래그 앤 드롭 / 클릭 업로드
-- 모델 lazy loading (첫 분석 시 로드)
-- 신뢰도 바 애니메이션
-- 전체 클래스 점수 표시
-- 아랍상: 주황-빨강 그라디언트 / 두부상: 파란 그라디언트
+`밸런스게임 | OX퀴즈 | 테스트` 순서 (전 페이지 동일). 기본값: 밸런스게임.
+- 밸런스게임/OX퀴즈: A/B 투표 UI (`voteSection`) 표시, TM 플레이어 숨김
+- 테스트: TM 플레이어 (`playerSection`) 표시, 투표 UI 숨김
+
+### 코딩 패턴 & 주의사항
+
+- **스크립트 로드 순서**: supabase.js → auth.js → 페이지별 JS (항상 준수)
+- **XSS 방지**: innerHTML 삽입 시 반드시 `escapeHtml()` 사용 (auth.js 정의)
+  - **class 속성값도 이스케이프 필수**: `class="badge badge-${escapeHtml(category)}"` — 텍스트 내용뿐 아니라 class 속성 내 동적 값도 반드시 escapeHtml 적용
+- **오픈 리다이렉트 방지**: login.html의 `?next=` 파라미터는 반드시 `safeRedirectUrl()` 통해 처리
+- **이벤트 위임**: 동적으로 삽입되는 버튼(삭제, 댓글)은 inline onclick 금지 → data-* + 부모 위임
+  - HTML 파일의 정적 버튼도 inline onclick 금지 → JS에서 addEventListener 사용
+- **Supabase count 쿼리**: `Promise.all()` 내부에서 `await` 혼용 금지 → 사전 resolve 후 전달
+- **모바일 카테고리**: `.nav-cats`는 768px 이하 숨김 → `#catSelectMobile` select로 대체
+
+---
+
+## 코딩 표준 (항상 적용)
+
+코드 작성·수정 시 아래 규칙을 반드시 준수합니다.
+
+### 보안
+- innerHTML 삽입 시 항상 `escapeHtml()` 사용 — 텍스트뿐 아니라 class 속성값도 포함
+- `?next=` 등 리다이렉트 파라미터는 반드시 `safeRedirectUrl()`로 검증
+
+### 이벤트 처리
+- 동적 삽입 요소의 inline `onclick` 금지 → `data-*` 속성 + 부모 요소 이벤트 위임
+- HTML 정적 버튼도 inline onclick 금지 → JS에서 `addEventListener` 사용
+
+### Supabase / 비동기
+- `Promise.all()` 내부에서 `await` 혼용 금지 → 사전 resolve 후 전달
+- RLS가 활성화된 테이블은 반드시 정책 확인 후 쿼리 작성
+
+### 스크립트 로드 순서 (platform/)
+`supabase.js` → `auth.js` → 페이지별 JS 순서 준수
+
+### 모바일
+- `.nav-cats`는 768px 이하 숨김 → `#catSelectMobile` select로 대체
