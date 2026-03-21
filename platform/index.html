@@ -48,18 +48,21 @@
       <svg class="logo-flame-sm" width="18" height="24" viewBox="0 0 18 24" fill="none" aria-hidden="true"><defs><linearGradient id="lgNav" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgNav)"/></svg>
       <span class="logo-wordmark">맞불</span>
     </a>
-    <div class="nav-cats">
-      <a href="index.html" class="cat-btn" data-cat="">전체</a>
-      <a href="index.html?cat=밸런스게임" class="cat-btn" data-cat="밸런스게임">밸런스게임</a>
-      <a href="index.html?cat=OX퀴즈" class="cat-btn" data-cat="OX퀴즈">OX퀴즈</a>
-      <a href="index.html?cat=테스트" class="cat-btn" data-cat="테스트">테스트</a>
+    <!-- 중앙 정렬 네비게이션 -->
+    <div class="nav-center">
+      <a href="index.html" class="nav-link" data-cat="밸런스게임">홈</a>
+      <a href="index.html?cat=토론" class="nav-link" data-cat="토론">토론</a>
+      <a href="index.html?cat=퀴즈" class="nav-link" data-cat="퀴즈">퀴즈</a>
+      <a href="index.html?cat=커뮤니티" class="nav-link" data-cat="커뮤니티">커뮤니티</a>
+      <a href="index.html?cat=정보" class="nav-link" data-cat="정보">정보</a>
     </div>
     <!-- 모바일용 카테고리 셀렉트 (768px 이하에서만 표시) -->
     <select class="cat-select-mobile" id="catSelectMobile" aria-label="카테고리 선택">
-      <option value="">전체</option>
-      <option value="밸런스게임">밸런스게임</option>
-      <option value="OX퀴즈">OX퀴즈</option>
-      <option value="테스트">테스트</option>
+      <option value="밸런스게임">홈</option>
+      <option value="토론">토론</option>
+      <option value="퀴즈">퀴즈</option>
+      <option value="커뮤니티">커뮤니티</option>
+      <option value="정보">정보</option>
     </select>
     <div class="nav-auth" id="navAuth">
       <a href="login.html" class="btn-login">로그인</a>
@@ -67,11 +70,141 @@
   </div>
 </nav>
 
+<!-- ── 히어로 섹션 (밸런스게임 홈 전용) ── -->
+<section class="hero-section" id="heroSection" style="display:none" aria-label="오늘의 맞불 투표">
+  <div class="hero-inner">
+    <div class="hero-meta-row">
+      <span class="hero-badge">지금 가장 뜨거운 논쟁</span>
+      <span class="hero-hot-badge">🔥 HOT</span>
+    </div>
+    <!-- 실제 토론 주제 (크게 표시) -->
+    <h1 class="hero-topic" id="heroSubtitle">지금 가장 뜨거운 논쟁을 불러오는 중...</h1>
+
+    <div class="hero-battle" id="heroBattle">
+      <!-- 배경 분할 -->
+      <div class="hero-bg-a" aria-hidden="true"></div>
+      <div class="hero-bg-b" aria-hidden="true"></div>
+
+      <!-- CSS 불꽃 (A진영 — 파랑) -->
+      <div class="hero-flame hero-flame-a" aria-hidden="true">
+        <div class="hf-layer hf-l1"></div>
+        <div class="hf-layer hf-l2"></div>
+        <div class="hf-layer hf-l3"></div>
+      </div>
+
+      <!-- CSS 불꽃 (B진영 — 오렌지) -->
+      <div class="hero-flame hero-flame-b" aria-hidden="true">
+        <div class="hf-layer hf-r1"></div>
+        <div class="hf-layer hf-r2"></div>
+        <div class="hf-layer hf-r3"></div>
+      </div>
+
+      <!-- 중앙 VS 구분선 (소용돌이/맞불 로고 제거) -->
+      <div class="hero-divider" aria-hidden="true">
+        <div class="hero-divider-line"></div>
+        <span class="hero-divider-vs">VS</span>
+        <div class="hero-divider-line"></div>
+      </div>
+
+      <!-- A 진영 (좌측) -->
+      <div class="hero-side hero-side-a">
+        <div class="hero-side-tag hero-tag-a">A 진영</div>
+        <div class="hero-option hero-opt-a" id="heroOptA"></div>
+        <div class="hero-pct hero-pct-a" id="heroPctA">50%</div>
+      </div>
+
+      <!-- B 진영 (우측) -->
+      <div class="hero-side hero-side-b">
+        <div class="hero-side-tag hero-tag-b">B 진영</div>
+        <div class="hero-option hero-opt-b" id="heroOptB"></div>
+        <div class="hero-pct hero-pct-b" id="heroPctB">50%</div>
+      </div>
+    </div>
+
+    <!-- 하단 통계 + 버튼 패널 -->
+    <div class="hero-stats-row" id="heroStatsRow" style="display:none">
+      <!-- 좌: A진영 베스트 댓글 -->
+      <div class="hsr-best hsr-best-a">
+        <div class="hsr-best-label">
+          <span class="hsr-dot hsr-dot-a"></span>찬성 측 베스트
+        </div>
+        <div class="hsr-best-content" id="heroBestA">아직 댓글이 없습니다</div>
+        <div class="hsr-best-likes" id="heroBestALikes"></div>
+      </div>
+
+      <!-- 중앙: 퍼센트 + 버튼 -->
+      <div class="hsr-center">
+        <div class="hsr-pcts">
+          <span class="hsr-pct-a" id="hsrPctA">찬성 50%</span>
+          <span class="hsr-pct-sep">|</span>
+          <span class="hsr-pct-b" id="hsrPctB">반대 50%</span>
+        </div>
+        <div class="hsr-btns">
+          <button class="hsr-btn hsr-btn-a" id="heroVoteBtnA">A 투표</button>
+          <button class="hsr-btn hsr-btn-b" id="heroVoteBtnB">B 투표</button>
+        </div>
+        <div class="hsr-meta">
+          총 <strong id="heroVoterCnt">0</strong>명 참전
+        </div>
+      </div>
+
+      <!-- 우: B진영 베스트 댓글 -->
+      <div class="hsr-best hsr-best-b">
+        <div class="hsr-best-label">
+          <span class="hsr-dot hsr-dot-b"></span>반대 측 베스트
+        </div>
+        <div class="hsr-best-content" id="heroBestB">아직 댓글이 없습니다</div>
+        <div class="hsr-best-likes" id="heroBestBLikes"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="page">
-  <div class="sort-bar">
+  <div class="sort-bar" id="sortBar">
     <button class="sort-btn active" data-sort="created_at">최신순</button>
     <button class="sort-btn" data-sort="view_count">인기순</button>
   </div>
+
+  <!-- 다른 뜨거운 논쟁 (밸런스게임 홈 전용) -->
+  <div class="debates-other-hd" id="debatesHeader" style="display:none">
+    <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1 11 L11 1 M7 1 L11 1 L11 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    다른 뜨거운 논쟁
+    <a class="debates-see-all" href="index.html?cat=토론">전체보기 ›</a>
+  </div>
+  <div class="debates-bar-list" id="debatesBarList"></div>
+
+  <!-- 퀴즈 프리뷰 (밸런스게임 홈 전용) -->
+  <div class="home-section-divider" id="quizDivider" style="display:none"></div>
+  <div class="home-preview-hd" id="quizPreviewHeader" style="display:none">
+    <svg class="home-preview-icon-svg" width="14" height="14" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="10" stroke="currentColor" stroke-width="1.4" opacity="0.4"/>
+      <circle cx="11" cy="11" r="3"  fill="currentColor" opacity="0.7"/>
+      <line x1="11" y1="1.5" x2="11" y2="5"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="11" y1="17" x2="11" y2="20.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="1.5" y1="11" x2="5" y2="11"  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="17"  y1="11" x2="20.5" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    퀴즈 &amp; 테스트
+    <a class="debates-see-all" href="index.html?cat=퀴즈">전체보기 ›</a>
+  </div>
+  <div class="home-preview-list" id="quizPreviewList"></div>
+
+  <!-- 커뮤니티 프리뷰 (밸런스게임 홈 전용) -->
+  <div class="home-section-divider" id="communityDivider" style="display:none"></div>
+  <div class="home-preview-hd" id="communityPreviewHeader" style="display:none">
+    <svg class="home-preview-icon-svg" width="14" height="14" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="6"  cy="8"  r="2.8" stroke="currentColor" stroke-width="1.3"/>
+      <circle cx="16" cy="8"  r="2.8" stroke="currentColor" stroke-width="1.3"/>
+      <circle cx="11" cy="15" r="2.8" stroke="currentColor" stroke-width="1.3"/>
+      <line x1="6" y1="8" x2="16" y2="8"  stroke="currentColor" stroke-width="1" opacity="0.5"/>
+      <line x1="6" y1="8" x2="11" y2="15" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+      <line x1="16" y1="8" x2="11" y2="15" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+    </svg>
+    커뮤니티
+    <a class="debates-see-all" href="index.html?cat=커뮤니티">전체보기 ›</a>
+  </div>
+  <div class="home-preview-list" id="communityPreviewList"></div>
 
   <div class="card-grid" id="cardGrid">
     <div style="grid-column:1/-1"><div class="spinner-wrap"><div class="spinner"></div></div></div>
@@ -123,12 +256,12 @@
         <div class="vm-best-title">진영별 베스트 주장</div>
         <div class="vm-best-grid">
           <div class="vm-best-card vm-best-card-a">
-            <div class="vm-best-card-label">🔵 A 진영 베스트</div>
+            <div class="vm-best-card-label vm-label-a">A 진영 베스트</div>
             <div id="vmBestA"></div>
             <div class="vm-best-card-author" id="vmBestAAuthor"></div>
           </div>
           <div class="vm-best-card vm-best-card-b">
-            <div class="vm-best-card-label">🟠 B 진영 베스트</div>
+            <div class="vm-best-card-label vm-label-b">B 진영 베스트</div>
             <div id="vmBestB"></div>
             <div class="vm-best-card-author" id="vmBestBAuthor"></div>
           </div>
@@ -147,5 +280,41 @@
 <script src="js/auth.js"></script>
 <script src="js/vote-modal.js"></script>
 <script src="js/home.js"></script>
+
+<!-- ── 불꽃/장풍 SVG 필터: feTurbulence + feDisplacementMap ── -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <!-- 냉염 필터 (A진영 카드 — 수직 불꽃) -->
+    <filter id="matbul-cold-fire" color-interpolation-filters="sRGB"
+            x="-5%" y="-85%" width="120%" height="210%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.065"
+                    numOctaves="4" seed="7" result="noise">
+        <animate attributeName="baseFrequency"
+          values="0.018 0.065;0.026 0.090;0.015 0.058;0.024 0.080;0.019 0.070;0.018 0.065"
+          dur="1.6s" repeatCount="indefinite"/>
+        <animate attributeName="seed"
+          values="7;11;4;16;9;7"
+          dur="3.2s" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="noise"
+                         scale="30" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- 열염 필터 (B진영 카드 — 수직 불꽃) -->
+    <filter id="matbul-hot-fire" color-interpolation-filters="sRGB"
+            x="-15%" y="-85%" width="120%" height="210%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.020 0.072"
+                    numOctaves="4" seed="13" result="noise">
+        <animate attributeName="baseFrequency"
+          values="0.020 0.072;0.015 0.058;0.028 0.095;0.018 0.068;0.023 0.082;0.020 0.072"
+          dur="1.9s" repeatCount="indefinite"/>
+        <animate attributeName="seed"
+          values="13;6;18;10;15;13"
+          dur="3.8s" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="noise"
+                         scale="32" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 </body>
 </html>
