@@ -153,6 +153,24 @@ window.getHeatLevel(views, likes) // 0~3 단계
 <b class="hi h3"></b>전쟁 중       <!-- hiFlame3: 활활 타오르는 불꽃 -->
 ```
 
+## 댓글 폼 진영 태그 (post.html — 밸런스게임 전용)
+
+투표 후 댓글 폼 위에 진영 레이블이 탭 형태로 붙음:
+
+```
+[A진영 · 선택지명]    ← #commentSideTag (.comment-side-tag-a/b)
+┌──────────────────────────────────┐  ← #commentFormInner (.comment-form-a/b)
+│ textarea (파랑/주황 테두리)       │
+└──────────────────────────────────┘  [작성]
+```
+
+CSS 구조:
+- `.comment-side-tag`: `border-radius: 6px 6px 0 0`, `margin-bottom: -1px` — textarea와 이음새 없이 연결
+- `.comment-side-tag-a`: 파랑 배경/테두리/텍스트 + `border-bottom: none`
+- `.comment-side-tag-b`: 주황 배경/테두리/텍스트 + `border-bottom: none`
+- `.comment-form-a textarea`: 파랑 테두리, `border-top-left-radius: 0`
+- `.comment-form-b textarea`: 주황 테두리, `border-top-left-radius: 0`
+
 ## Canvas 파티클 시스템 (home.js)
 
 - 열기 단계 카드에 `<canvas class="card-spark-canvas" data-heat="{level}">` 삽입

@@ -7,6 +7,15 @@
 .env.local
 .env*.local
 
+# Supabase 실제 키 (supabase.example.js를 복사해서 사용)
+platform/js/supabase.js
+
+# 개인정보 포함 법적 문서 (운영자 실명/연락처)
+platform/legal/
+
+# bkit internal state
+.bkit/
+
 # Python cache
 __pycache__/
 *.pyc

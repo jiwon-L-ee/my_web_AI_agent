@@ -33,7 +33,6 @@
   let voteB = 0;
   let userVote = null;
   let currentUser = null;
-  let isVoting = false; // 중복 투표 방지 가드
 
   // ── 모달 열기 ──────────────────────────────────────────
   async function openVoteModal(postId) {
@@ -41,13 +40,16 @@
     userVote = null;
     voteA = 0;
     voteB = 0;
-    isVoting = false; // 모달 재오픈 시 가드 초기화
 
     // 초기 상태 리셋
     overlay.classList.remove('hidden');
     overlay.removeAttribute('data-voted');
-    panelA.classList.remove('vm-selected');
-    panelB.classList.remove('vm-selected');
+    panelA.classList.remove('vm-selected', 'vm-winner', 'vm-loser');
+    panelB.classList.remove('vm-selected', 'vm-winner', 'vm-loser');
+    const vsCenter = overlay.querySelector('.vm-center-vs');
+    if (vsCenter) { vsCenter.style.width = ''; vsCenter.style.opacity = ''; }
+    const vsCircle = overlay.querySelector('.vm-vs-circle');
+    if (vsCircle) vsCircle.style.opacity = '';
     resultEl.style.display = 'none';
     hintEl.style.display   = '';
     titleEl.textContent    = '불러오는 중...';
@@ -70,14 +72,12 @@
     voteA = countARes.count ?? 0;
     voteB = countBRes.count ?? 0;
 
-    // 내 기존 투표 확인
-    if (currentUser) {
-      const { data: myVote } = await db
-        .from('votes')
-        .select('choice')
-        .eq('post_id', postId)
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
+    // 내 기존 투표 확인 (로그인: user_id, 비로그인: guest_id)
+    {
+      let q = db.from('votes').select('choice').eq('post_id', postId);
+      if (currentUser) q = q.eq('user_id', currentUser.id);
+      else q = q.eq('guest_id', getGuestId());
+      const { data: myVote } = await q.maybeSingle();
       userVote = myVote?.choice ?? null;
     }
 
@@ -86,78 +86,30 @@
     titleEl.textContent = post.title;
     optAEl.textContent  = post.option_a || 'A';
     optBEl.textContent  = post.option_b || 'B';
-    fullLink.href       = `post.html?id=${postId}`;
 
-    // 이미 투표했으면 결과 표시
     if (userVote) {
-      applyVoteUI(userVote, false);
+      // 이미 투표함 → 결과 표시
+      applyVoteUI(userVote);
       await showResult();
-    }
-  }
-
-  // ── 투표 처리 ──────────────────────────────────────────
-  async function handleVote(choice) {
-    if (isVoting) return;
-    isVoting = true;
-    if (!currentUser) {
-      isVoting = false;
-      const next = encodeURIComponent(location.href);
-      location.href = `login.html?next=${next}`;
-      return;
-    }
-
-    // 같은 선택 재클릭 → 취소
-    if (userVote === choice) {
-      const { error } = await db.from('votes').delete()
-        .eq('post_id', currentPostId).eq('user_id', currentUser.id);
-      if (error) { console.error(error); isVoting = false; return; }
-      if (choice === 'A') voteA = Math.max(0, voteA - 1);
-      else                voteB = Math.max(0, voteB - 1);
-      userVote = null;
-      panelA.classList.remove('vm-selected');
-      panelB.classList.remove('vm-selected');
-      resultEl.style.display = 'none';
-      hintEl.style.display   = '';
-      overlay.removeAttribute('data-voted');
-      isVoting = false;
-      return;
-    }
-
-    // 다른 선택으로 변경
-    if (userVote !== null) {
-      const { error } = await db.from('votes').update({ choice })
-        .eq('post_id', currentPostId).eq('user_id', currentUser.id);
-      if (error) { console.error(error); isVoting = false; return; }
-      if (choice === 'A') { voteA++; voteB = Math.max(0, voteB - 1); }
-      else                 { voteB++; voteA = Math.max(0, voteA - 1); }
     } else {
-      // 신규 투표
-      const { error } = await db.from('votes').insert({
-        post_id: currentPostId, user_id: currentUser.id, choice
-      });
-      if (error) { console.error(error); isVoting = false; return; }
-      if (choice === 'A') voteA++;
-      else                voteB++;
+      // 미투표 → 안내 문구 표시 (패널 클릭 시 post.html로 이동)
+      if (hintEl) hintEl.textContent = '댓글을 읽고 투표해보세요. 양쪽 의견을 들어본 후 더 나은 선택을 할 수 있습니다.';
     }
-
-    userVote = choice;
-    applyVoteUI(choice, true);
-    await showResult();
-    isVoting = false;
   }
 
-  function applyVoteUI(choice, animate) {
+  // ── 투표 없음 — 패널 클릭 시 post.html로 이동 ─────────
+  function goToPost() {
+    if (!currentPostId) return;
+    const dest = `post.html?id=${currentPostId}&from=home`;
+    closeModal();
+    location.href = dest;
+  }
+
+  function applyVoteUI(choice) {
     panelA.classList.toggle('vm-selected', choice === 'A');
     panelB.classList.toggle('vm-selected', choice === 'B');
     overlay.dataset.voted = choice;
     hintEl.style.display  = 'none';
-
-    if (animate) {
-      const panel = choice === 'A' ? panelA : panelB;
-      panel.style.animation = 'none';
-      void panel.offsetWidth;
-      panel.style.animation = '';
-    }
   }
 
   // ── 결과 + 베스트 주장 ─────────────────────────────────
@@ -175,11 +127,30 @@
       requestAnimationFrame(() => {
         barA.style.width = pA.toFixed(1) + '%';
         barB.style.width = pB.toFixed(1) + '%';
+
+        // VS 서클 → 얇은 구분선으로 축소
+        const vsCenter = overlay.querySelector('.vm-center-vs');
+        if (vsCenter) vsCenter.style.width = '3px';
+        const vsCircle = overlay.querySelector('.vm-vs-circle');
+        if (vsCircle) vsCircle.style.opacity = '0';
+
+        // 승자/패자 시각화 (5% 이상 차이 날 때만)
+        panelA.classList.remove('vm-winner', 'vm-loser');
+        panelB.classList.remove('vm-winner', 'vm-loser');
+        if (total > 2 && Math.abs(pA - pB) > 5) {
+          if (pA > pB) {
+            panelA.classList.add('vm-winner');
+            panelB.classList.add('vm-loser');
+          } else {
+            panelB.classList.add('vm-winner');
+            panelA.classList.add('vm-loser');
+          }
+        }
       });
     });
 
-    cntA.textContent = `🔵 ${pA.toFixed(1)}% (${voteA}표)`;
-    cntB.textContent = `🟠 ${pB.toFixed(1)}% (${voteB}표)`;
+    cntA.innerHTML = `<span class="vm-dot vm-dot-a"></span><span class="vm-pct-a">${pA.toFixed(1)}%</span><span class="vm-cnt-votes">(${voteA}표)</span>`;
+    cntB.innerHTML = `<span class="vm-dot vm-dot-b"></span><span class="vm-pct-b">${pB.toFixed(1)}%</span><span class="vm-cnt-votes">(${voteB}표)</span>`;
 
     // 베스트 주장 (각 진영 좋아요 최다 댓글)
     await loadBestComments();
@@ -216,7 +187,7 @@
     const best = sorted[0];
     const likeCount = best.comment_likes?.[0]?.count ?? 0;
     textEl.innerHTML = `<div class="vm-best-card-text">${escapeHtml(best.content)}</div>`;
-    authorEl.textContent = `— ${escapeHtml(best.profiles?.username ?? '익명')} · ❤️ ${likeCount}`;
+    authorEl.textContent = `— ${escapeHtml(best.profiles?.username ?? '익명')} · ♥ ${likeCount}`;
   }
 
   // ── 모달 닫기 ──────────────────────────────────────────
@@ -229,6 +200,15 @@
   // ── 이벤트 리스너 ──────────────────────────────────────
   closeBtn.addEventListener('click', closeModal);
 
+  // 전체 댓글 보기 — 모달 먼저 닫고 이동 (히스토리 스택 정리)
+  fullLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!currentPostId) return;
+    const dest = `post.html?id=${currentPostId}&from=home`;
+    closeModal();
+    location.href = dest;
+  });
+
   // 오버레이 배경 클릭 시 닫기
   overlay.addEventListener('click', e => {
     if (e.target === overlay) closeModal();
@@ -239,16 +219,16 @@
     if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
   });
 
-  // 패널 클릭
-  panelA.addEventListener('click', () => handleVote('A'));
-  panelB.addEventListener('click', () => handleVote('B'));
+  // 패널 클릭 — 미투표 시 post.html로 이동, 투표 완료 시 무시(결과만 표시)
+  panelA.addEventListener('click', () => { if (!userVote) goToPost(); });
+  panelB.addEventListener('click', () => { if (!userVote) goToPost(); });
 
   // 키보드 접근성
   [panelA, panelB].forEach(panel => {
     panel.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        handleVote(panel.dataset.choice);
+        if (!userVote) goToPost();
       }
     });
   });
@@ -267,8 +247,15 @@
   // 외부에서 호출 가능하도록 노출
   window.openVoteModal = openVoteModal;
 
-  // ── 인기 여부 판단 (home.js에서 사용) ─────────────────
+  // ── 열기 3단계 판단 (home.js에서 사용) ───────────────
+  // 0: 일반  1: 열기(shimmer)  2: 연기  3: 불
+  window.getHeatLevel = function (viewCount, likeCount) {
+    if (viewCount >= 500 || likeCount >= 50) return 3;
+    if (viewCount >= 100 || likeCount >= 15) return 2;
+    if (viewCount >= 30  || likeCount >= 5)  return 1;
+    return 0;
+  };
   window.isHotPost = function (viewCount, likeCount) {
-    return viewCount >= HOT_VIEWS || likeCount >= HOT_LIKES;
+    return window.getHeatLevel(viewCount, likeCount) >= 2;
   };
 })();

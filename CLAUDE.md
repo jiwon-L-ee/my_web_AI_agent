@@ -71,13 +71,17 @@ QA/개발: http://localhost:8080/?reset 으로 플래그 초기화 후 인포그
 platform/
 ├── infographic.html    — 맞불 소개 인트로 페이지 (첫 방문 시 표시)
 ├── index.html / login.html / create.html / post.html / mypage.html / profile.html
+├── quiz.html           — 퀴즈 플레이어 (OX/객관식/단답형/주관식)
+├── test.html           — TM 테스트 플레이어 (Teachable Machine)
 ├── css/style.css       — 다크 테마 (CSS 변수 기반, --bg, --surface, --accent 등)
 └── js/
     ├── supabase.js     — Supabase 클라이언트 초기화 (window.db)
-    ├── auth.js         — getUser, requireAuth, signInWithGoogle, escapeHtml, relativeTime, safeRedirectUrl
+    ├── auth.js         — getUser, requireAuth, signInWithGoogle, escapeHtml, relativeTime, safeRedirectUrl, getGuestId
     ├── home.js         — 카드 그리드, 카테고리 필터, 정렬, 페이지네이션
-    ├── create.js       — 게시물 작성, 썸네일 업로드, toggleCategoryFields()
-    ├── post.js         — 투표/테스트 플레이어 조건부 렌더링, 좋아요, 댓글 CRUD
+    ├── create.js       — 게시물 작성, 썸네일 업로드, 퀴즈 문항 빌더, toggleCategoryFields()
+    ├── post.js         — 밸런스게임 투표UI, 퀴즈/테스트 CTA, 좋아요, 댓글 CRUD
+    ├── quiz.js         — 퀴즈 플레이어 로직 (quiz.html 전용)
+    ├── test.js         — TM 테스트 플레이어 로직 (test.html 전용)
     ├── mypage.js       — 통계 집계, 내 게시물 관리
     └── profile.js      — 타인 프로필, 팔로우 토글
 ```
@@ -85,11 +89,12 @@ platform/
 ### Supabase 구성
 
 - **프로젝트 URL**: `https://mwsfzxhblboskdlffsxi.supabase.co`
-- **테이블**: profiles, posts, likes, comments, follows, votes (RLS 활성화)
+- **테이블**: profiles, posts, likes, comments, comment_likes, follows, votes, quiz_questions, persuasion_likes (RLS 활성화)
+- **votes**: `user_id` nullable + `guest_id TEXT` — 비로그인 익명 투표 지원 (`getGuestId()` localStorage UUID)
 - **Storage**: thumbnails 버킷 (public)
 - **DB 함수**: `increment_view_count(post_id uuid)` — RPC로 조회수 증가
 - **트리거**: `on_auth_user_created` — 구글 로그인 시 profiles 자동 생성
-- **마이그레이션**: `supabase/migrations/20260319_create_platform_tables.sql`, `20260320_balance_game.sql`
+- **마이그레이션**: `supabase/migrations/20260319_create_platform_tables.sql`, `20260320_balance_game.sql`, `20260322_quiz_types.sql`
 
 ### 실행 방법
 
@@ -109,16 +114,19 @@ Supabase Dashboard → Auth → Providers → Google → Client ID/Secret 입력
 ### 카테고리
 
 **네비게이션 탭**: `홈(밸런스게임) | 토론 | 퀴즈 | 커뮤니티 | 정보` (전 페이지 동일)
-**DB 저장 카테고리**: `밸런스게임 / OX퀴즈 / 테스트 / 커뮤니티 / 정보`
+**DB 저장 카테고리**: `밸런스게임 / 퀴즈 / 테스트 / 커뮤니티 / 정보`
+- `퀴즈` 카테고리는 `posts.quiz_type` 컬럼으로 세분화: `ox | multiple | short | subjective`
+- 기존 `OX퀴즈` → `category='퀴즈', quiz_type='ox'`로 마이그레이션 완료 (2026-03-22)
 
 탭 동작:
 - **홈**: 밸런스게임 히어로 + 바형5 + 퀴즈·커뮤니티 프리뷰
 - **토론**: 밸런스게임 게시물을 바형 리스트로 표시 (인기순/최신순)
-- **퀴즈**: OX퀴즈 + 테스트 합산 카드 그리드 (`.in('category', ['OX퀴즈', '테스트'])`)
+- **퀴즈**: 퀴즈 + 테스트 합산 카드 그리드 (`.in('category', ['퀴즈', '테스트'])`)
 
-post.html 투표 UI:
-- 밸런스게임/OX퀴즈: A/B 투표 UI (`voteSection`) 표시, TM 플레이어 숨김
-- 테스트: TM 플레이어 (`playerSection`) 표시, 투표 UI 숨김
+post.html 섹션 분기:
+- 밸런스게임: `#voteSection` — A/B 투표 UI
+- 퀴즈: `#quizSection` — "퀴즈 풀기" CTA → `quiz.html?id=`
+- 테스트: `#testSection` — "테스트 시작" CTA → `test.html?id=`
 
 ### 코딩 패턴 & 주의사항
 
@@ -128,6 +136,8 @@ post.html 투표 UI:
 - **오픈 리다이렉트 방지**: login.html의 `?next=` 파라미터는 반드시 `safeRedirectUrl()` 통해 처리
 - **이벤트 위임**: 동적으로 삽입되는 버튼(삭제, 댓글)은 inline onclick 금지 → data-* + 부모 위임
   - HTML 파일의 정적 버튼도 inline onclick 금지 → JS에서 addEventListener 사용
+  - 이벤트 위임 등록 시 `{ once: true }` **절대 금지** — 첫 이벤트 후 리스너 소멸로 이후 모든 상호작용 끊김
+  - 동적 목록 컨테이너는 `setupXxxEvents()` 패턴으로 초기에 한 번만 등록, innerHTML 재생성 시 재등록 불필요
 - **Supabase count 쿼리**: `Promise.all()` 내부에서 `await` 혼용 금지 → 사전 resolve 후 전달
 - **모바일 카테고리**: `.nav-cats`는 768px 이하 숨김 → `#catSelectMobile` select로 대체
 

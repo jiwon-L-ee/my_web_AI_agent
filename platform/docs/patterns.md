@@ -120,6 +120,36 @@ const url = modelUrl.endsWith('/') ? modelUrl : modelUrl + '/';
 model = await window.tmImage.load(url + 'model.json', url + 'metadata.json');
 ```
 
+## 댓글 textarea Enter 키
+
+Enter = 제출, Shift+Enter = 줄바꿈. 이벤트 위임으로 등록:
+
+```js
+formArea.addEventListener('keydown', e => {
+  if (e.target.id === 'commentInput' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    submitComment();
+  }
+});
+```
+
+placeholder도 "(Enter로 제출, Shift+Enter로 줄바꿈)"으로 통일.
+
+## 이모지 금지 범위
+
+카드 아이콘뿐 아니라 **모달 버튼, 인터랙티브 UI 요소 전반에도 이모지 사용 금지**.
+텍스트만 사용하고 필요한 경우 inline SVG 또는 CSS로 대체:
+
+```html
+<!-- ❌ -->
+<button>🤔 스스로 생각이 바뀌었어요</button>
+
+<!-- ✅ -->
+<button>스스로 생각이 바뀌었어요</button>
+```
+
+예외: 진영 표시 배지 내 🔵 🟠 는 허용 (단, 점진적 SVG 대체 예정).
+
 ## 트러블슈팅
 
 | 증상 | 원인 & 해결 |

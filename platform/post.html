@@ -5,14 +5,225 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>게시물 | 맞불</title>
   <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
   <style>
-    .btn-del-post {
-      position: absolute; top: 10px; right: 10px;
-      background: rgba(0,0,0,0.6); border: none; border-radius: 6px;
-      padding: 5px 9px; cursor: pointer; font-size: 0.85rem;
-      color: #fff; transition: background 0.15s;
+    /* ── post 전용 디자인 토큰 ── */
+    :root {
+      --gradient-title: linear-gradient(135deg, #fff 0%, #ffe4a0 40%, #f5a623 70%, #e94560 100%);
+      --glow-accent:    0 0 60px rgba(233, 69, 96, 0.18);
+      --glow-blue:      0 0 40px rgba(47, 128, 237, 0.14);
+      --glow-orange:    0 0 40px rgba(245, 166, 35, 0.14);
     }
-    .btn-del-post:hover { background: var(--accent); }
+
+    /* ── 레이아웃 ── */
+    .page-narrow { max-width: 800px; }
+
+    /* ── 돌아가기 버튼 ── */
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-bottom: 24px;
+      padding: 6px 16px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 20px; cursor: pointer;
+      font-size: 0.82rem; color: var(--text-muted);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-back:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ── 포스트 헤더 ── */
+    .post-header {
+      position: relative;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .post-header::before {
+      content: '';
+      position: absolute;
+      top: -20px; left: 50%; transform: translateX(-50%);
+      width: 60%; height: 80px;
+      background: radial-gradient(ellipse, rgba(233,69,96,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .post-badge { margin-bottom: 16px; }
+    .post-title {
+      font-family: 'Pretendard', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      text-shadow: 0 0 40px rgba(233,69,96,0.3);
+      margin-bottom: 24px;
+    }
+    .post-stat-icon { display: inline-flex; align-items: center; }
+
+    /* ── 삭제 버튼 (position:absolute 이탈 버그 수정) ── */
+    #deleteBtn {
+      position: static;
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 10px;
+      cursor: pointer; font-size: 0.82rem;
+      color: var(--text-muted); transition: color 0.15s, border-color 0.15s;
+    }
+    #deleteBtn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── 본문 설명 ── */
+    .post-description { font-size: 1rem; line-height: 1.85; margin: 32px 0; }
+
+    /* ── 투표 배틀 섹션 ── */
+    .vote-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .vote-battle {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: stretch;
+      min-height: 180px;
+    }
+    /* vote-battle 내 불꽃 — opacity/scale은 CSS 변수로 동적 제어 */
+    .vb-flame { width: 32%; height: 100%; }
+    .hero-flame-a.vb-flame { left: 2%; }
+    .hero-flame-b.vb-flame { right: 2%; }
+    /* 배경 분할: --vb-pct-a 변수로 좌/우 비율 조절 */
+    .vote-bg-a {
+      position: absolute; inset: 0 calc(100% - var(--vb-pct-a, 50%)) 0 0;
+      background: rgba(47,128,237,0.10);
+      transition: inset 0.9s cubic-bezier(0.34,1,0.64,1);
+    }
+    .vote-bg-b {
+      position: absolute; inset: 0 0 0 var(--vb-pct-a, 50%);
+      background: rgba(245,166,35,0.10);
+      transition: inset 0.9s cubic-bezier(0.34,1,0.64,1);
+    }
+    .vote-side {
+      position: relative; z-index: 1;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 28px 20px; gap: 12px;
+      text-align: center;
+    }
+    .vote-side-tag {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.2em; text-transform: uppercase;
+    }
+    .vote-tag-a { color: #71d8f7; }
+    .vote-tag-b { color: #ffc947; }
+    .vote-choice {
+      font-size: 1.05rem; font-weight: 700;
+      color: var(--text); line-height: 1.4;
+    }
+    .vote-pct {
+      font-size: 0.82rem; color: var(--text-muted); font-weight: 600;
+    }
+    .vote-vs-divider {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 8px;
+      padding: 0 4px; flex-shrink: 0;
+    }
+    .vote-vs-line { width: 1px; height: 28px; background: var(--border); }
+    .vote-vs-text {
+      font-size: 0.72rem; font-weight: 800;
+      color: var(--text-muted); letter-spacing: 0.1em;
+    }
+    .vote-bar-row {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      display: flex; height: 3px;
+    }
+    .vote-bar-a { background: var(--blue); transition: width 0.6s ease; }
+    .vote-bar-b { background: var(--orange); transition: width 0.6s ease; }
+    .vote-btns {
+      display: flex; gap: 12px; margin-top: 16px;
+    }
+    .vote-btn {
+      flex: 1; padding: 12px;
+      border-radius: 10px; border: 1.5px solid var(--border);
+      background: transparent; cursor: pointer;
+      font-size: 0.9rem; font-weight: 700;
+      color: var(--text-muted);
+      transition: all 0.18s;
+    }
+    .vote-btn-a:hover, .vote-btn-a.active {
+      background: rgba(47,128,237,0.12);
+      border-color: var(--blue); color: #71d8f7;
+      box-shadow: 0 0 18px rgba(47,128,237,0.2);
+    }
+    .vote-btn-b:hover, .vote-btn-b.active {
+      background: rgba(245,166,35,0.12);
+      border-color: var(--orange); color: #ffc947;
+      box-shadow: 0 0 18px rgba(245,166,35,0.2);
+    }
+
+    /* ── 퀴즈 / 테스트 CTA ── */
+    .play-section {
+      margin: 36px 0;
+      padding: 44px 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .play-section::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 0%, rgba(233,69,96,0.06), transparent);
+      pointer-events: none;
+    }
+    .play-section-label {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.35em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 14px;
+    }
+    .play-section-title {
+      font-size: 1.1rem; font-weight: 600;
+      color: var(--text); margin-bottom: 28px; line-height: 1.5;
+    }
+    .btn-play {
+      display: inline-block; padding: 15px 44px;
+      background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%);
+      color: #fff; border-radius: 50px;
+      font-weight: 700; font-size: 1rem;
+      text-decoration: none;
+      box-shadow: 0 6px 24px rgba(233,69,96,0.35);
+      transition: all 0.2s;
+    }
+    .btn-play:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(233,69,96,0.5); }
+    .play-meta { margin-top: 14px; font-size: 0.82rem; color: var(--text-muted); }
+
+    /* ── 댓글 섹션 ── */
+    .comments-section { margin-top: 60px; }
+    .comments-title {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.35em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 28px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .comments-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+    .comment-list { gap: 24px; }
+    .comment-item { gap: 14px; }
+    .comment-avatar { width: 38px; height: 38px; }
+    .comment-text { font-size: 0.93rem; line-height: 1.75; }
+
+    /* ── 푸터 브랜드 ── */
+    .footer-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 800; font-size: 1.05rem;
+    }
   </style>
 </head>
 <body>
@@ -33,6 +244,10 @@
     <div class="nav-auth" id="navAuth">
       <a href="login.html" class="btn-login">로그인</a>
     </div>
+    <button class="btn-theme-toggle" id="themeToggle" aria-label="테마 전환">
+      <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
   </div>
 </nav>
 
@@ -42,6 +257,7 @@
 
   <!-- Post content -->
   <div id="postContent" style="display:none">
+    <button id="backBtn" class="btn-back" style="display:none">← 돌아가기</button>
     <div class="post-header">
       <div id="postBadge" class="post-badge"></div>
       <h1 id="postTitle" class="post-title"></h1>
@@ -56,75 +272,120 @@
         </a>
         <div style="display:flex;align-items:center;gap:12px">
           <div class="post-stats">
-            <span class="post-stat">👁 <span id="viewCount">0</span></span>
-            <span class="post-stat">💬 <span id="commentCount">0</span></span>
+            <span class="post-stat">
+              <span class="post-stat-icon"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></span>
+              <span id="viewCount">0</span>
+            </span>
+            <span class="post-stat">
+              <span class="post-stat-icon"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 4h14a1 1 0 011 1v8a1 1 0 01-1 1H7l-4 3V5a1 1 0 011-1z"/></svg></span>
+              <span id="commentCount">0</span>
+            </span>
           </div>
-          <button id="likeBtn" class="like-btn">🤍 <span id="likeCount">0</span></button>
-          <button id="deleteBtn" style="display:none" class="btn-del-post" title="삭제">🗑️</button>
+          <button id="likeBtn" class="like-btn"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 17s-7-4.35-7-9a4 4 0 018 0 4 4 0 018 0c0 4.65-7 9-7 9z"/></svg> <span id="likeCount">0</span></button>
+          <button id="deleteBtn" style="display:none" title="삭제"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M8 6V4h4v2M5 6l1 12h8l1-12" stroke-linecap="round" stroke-linejoin="round"/></svg> 삭제</button>
         </div>
       </div>
     </div>
 
     <p id="postDescription" class="post-description" style="display:none"></p>
 
-    <!-- Vote Section (밸런스게임 / OX퀴즈) -->
+    <!-- 밸런스게임 투표 섹션 -->
     <div id="voteSection" style="display:none">
-      <div class="vote-section">
-        <div class="vote-options">
+      <div class="vote-section-label">지금 투표하기 <span id="expiryBadge"></span></div>
+      <div class="vote-battle">
+        <div class="vote-bg-a" aria-hidden="true"></div>
+        <div class="vote-bg-b" aria-hidden="true"></div>
+
+        <!-- 불꽃 (A진영 — 파랑) -->
+        <div class="hero-flame hero-flame-a vb-flame" aria-hidden="true">
+          <div class="hf-layer hf-l1"></div>
+          <div class="hf-layer hf-l2"></div>
+          <div class="hf-layer hf-l3"></div>
+        </div>
+        <!-- 불꽃 (B진영 — 오렌지) -->
+        <div class="hero-flame hero-flame-b vb-flame" aria-hidden="true">
+          <div class="hf-layer hf-r1"></div>
+          <div class="hf-layer hf-r2"></div>
+          <div class="hf-layer hf-r3"></div>
+        </div>
+
+        <div class="vote-side vote-side-a">
+          <div class="vote-side-tag vote-tag-a">A 진영</div>
           <div class="vote-choice" id="voteChoiceA"></div>
-          <div class="vote-vs">VS</div>
+          <div class="vote-pct" id="voteCountA">0표</div>
+        </div>
+
+        <div class="vote-vs-divider" aria-hidden="true">
+          <div class="vote-vs-line"></div>
+          <span class="vote-vs-text">VS</span>
+          <div class="vote-vs-line"></div>
+        </div>
+
+        <div class="vote-side vote-side-b">
+          <div class="vote-side-tag vote-tag-b">B 진영</div>
           <div class="vote-choice" id="voteChoiceB"></div>
+          <div class="vote-pct" id="voteCountB">0표</div>
         </div>
-        <div class="vote-btns">
-          <button class="vote-btn vote-btn-a" data-choice="A">A 투표</button>
-          <button class="vote-btn vote-btn-b" data-choice="B">B 투표</button>
-        </div>
-        <div class="vote-bar-wrap">
+
+        <div class="vote-bar-row">
           <div class="vote-bar-a" id="voteBarA" style="width:50%"></div>
           <div class="vote-bar-b" id="voteBarB" style="width:50%"></div>
         </div>
-        <div class="vote-counts">
-          <span id="voteCountA">0표</span>
-          <span id="voteCountB">0표</span>
+      </div>
+      <div class="vote-btns">
+        <button class="vote-btn vote-btn-a" data-choice="A">A 투표</button>
+        <button class="vote-btn vote-btn-b" data-choice="B">B 투표</button>
+      </div>
+
+      <!-- 마감 1시간 전 블라인드 배너 -->
+      <div id="blindModeBanner" style="display:none" class="blind-mode-banner">
+        ⏳ 마감 1시간 전 — 투표율이 비공개입니다. 댓글만 보고 공정하게 판단해보세요!
+      </div>
+
+      <!-- 정산 결과 배너 (게임 만료 후) -->
+      <div id="resultBanner" style="display:none"></div>
+    </div>
+
+    <!-- 왜 바꿨나요? 모달 (1분 이내 무료 변경 후 자기반성) -->
+    <div id="persuasionModal" style="display:none" class="persuasion-modal-overlay">
+      <div class="persuasion-modal-box">
+        <p class="persuasion-modal-title">생각이 바뀌셨나요?</p>
+        <p class="persuasion-modal-sub">1분 이내라 무료로 변경됩니다</p>
+        <button id="persuasionSelf" class="persuasion-modal-btn">확인</button>
+      </div>
+    </div>
+
+    <!-- 투표 변경 모달 (1분 이후 — 설득됨 선택 + 크레딧 차감) -->
+    <div id="voteChangeModal" style="display:none" class="persuasion-modal-overlay">
+      <div class="persuasion-modal-box vc-modal-box">
+        <p class="persuasion-modal-title">투표를 바꾸시겠어요?</p>
+        <p class="persuasion-modal-sub">당신을 설득한 댓글을 선택해주세요</p>
+        <div id="voteChangeOpposingLabel" class="vc-opposing-label"></div>
+        <div id="voteChangeCommentList" class="vc-comment-list"></div>
+        <div id="voteChangeCreditInfo" class="vc-credit-info"></div>
+        <div class="vc-btn-row">
+          <button id="voteChangeCancelBtn" class="persuasion-modal-btn">취소</button>
+          <button id="voteChangeConfirmBtn" class="persuasion-modal-btn persuasion-modal-btn-accent" disabled>변경하기 (-5 크레딧)</button>
         </div>
       </div>
     </div>
 
-    <!-- Test Player -->
-    <div id="playerSection">
-      <div class="player-section">
-        <div class="player-title">🎯 테스트 해보기</div>
+    <!-- 퀴즈 CTA 섹션 -->
+    <div id="quizSection" style="display:none">
+      <div class="play-section">
+        <div id="quizPlayLabel" class="play-section-label">퀴즈 도전</div>
+        <div class="play-section-title">문제를 풀고 실력을 확인해보세요</div>
+        <a id="quizPlayBtn" href="#" class="btn-play">퀴즈 풀기</a>
+        <div id="quizPlayMeta" class="play-meta"></div>
+      </div>
+    </div>
 
-        <div id="uploadArea" class="upload-area">
-          <div class="upload-icon">📷</div>
-          <div class="upload-text">이미지를 업로드하거나 드래그하세요</div>
-          <div class="upload-hint">JPG, PNG, GIF 지원</div>
-        </div>
-        <input type="file" id="fileInput" accept="image/*" style="display:none">
-
-        <div id="previewArea" class="preview-area" style="display:none">
-          <img id="previewImg" alt="preview">
-          <button id="resetImgBtn" class="btn-reset-img">다른 이미지 선택</button>
-        </div>
-
-        <button id="analyzeBtn" class="btn-analyze" disabled>분석하기</button>
-
-        <div id="playerLoading" class="player-loading" style="display:none">
-          <div class="spinner" style="margin:0 auto 10px"></div>
-          <p>분석 중...</p>
-        </div>
-
-        <div id="resultSection" class="result-section" style="display:none">
-          <div class="result-card">
-            <div class="result-label">판정 결과</div>
-            <div id="resultClass" class="result-class"></div>
-            <div class="confidence-bar-wrap">
-              <div id="confidenceBar" class="confidence-bar" style="width:0%"></div>
-            </div>
-            <div id="confidenceText" class="confidence-text"></div>
-            <div id="allScores" class="all-scores"></div>
-          </div>
-        </div>
+    <!-- 테스트 CTA 섹션 -->
+    <div id="testSection" style="display:none">
+      <div class="play-section">
+        <div class="play-section-label">AI 테스트</div>
+        <div class="play-section-title">이미지를 업로드해서 AI가 판별해드립니다</div>
+        <a id="testPlayBtn" href="#" class="btn-play">테스트 시작</a>
       </div>
     </div>
 
@@ -142,19 +403,17 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  // Setup comment form area based on auth
   async function setupCommentForm() {
     const user = await getUser();
     const area = document.getElementById('commentFormArea');
     if (user) {
       area.innerHTML = `
-        <div class="comment-form">
-          <textarea id="commentInput" placeholder="댓글을 입력하세요 (Ctrl+Enter로 제출)"></textarea>
+        <div id="commentSideTag" style="display:none" class="comment-side-tag"></div>
+        <div class="comment-form" id="commentFormInner">
+          <textarea id="commentInput" placeholder="댓글을 입력하세요 (Enter로 제출, Shift+Enter로 줄바꿈)"></textarea>
           <button id="commentSubmitBtn" class="btn-comment">작성</button>
         </div>`;
     } else {
@@ -165,5 +424,49 @@
   setupCommentForm();
 </script>
 <script src="js/post.js"></script>
+<script src="js/legal-modal.js"></script>
+<script>
+  (function() {
+    if (localStorage.getItem('matbul-theme') === 'light') document.body.classList.add('light-mode');
+    document.getElementById('themeToggle')?.addEventListener('click', function() {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('matbul-theme', isLight ? 'light' : 'dark');
+    });
+  })();
+</script>
+
+<footer class="site-footer">
+  <div class="ad-banner">
+    <div class="ad-banner-inner">
+      광고 문의: matbul@example.com &nbsp;|&nbsp; 광고 영역 728×90
+    </div>
+  </div>
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-logo">
+        <svg width="14" height="18" viewBox="0 0 18 24" fill="none" aria-hidden="true"><defs><linearGradient id="lgFoot" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgFoot)"/></svg>
+        맞불
+      </div>
+      <p class="footer-tagline">사소한 고집의 끝.<br>토론·밸런스게임·퀴즈를<br>공유하는 커뮤니티 플랫폼.</p>
+    </div>
+    <div class="footer-col">
+      <h4>서비스 소개</h4>
+      <ul>
+        <li><a href="infographic.html">맞불 소개</a></li>
+        <li><a href="#" class="footer-link-todo">팀 소개</a></li>
+        <li><a href="mailto:matbul@example.com">문의하기</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>법적 문서</h4>
+      <ul>
+        <li><a href="#" data-legal="terms">이용약관</a></li>
+        <li><a href="#" data-legal="privacy">개인정보처리방침</a></li>
+        <li><a href="#" data-legal="guidelines">커뮤니티 가이드라인</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 맞불. All rights reserved.</div>
+</footer>
 </body>
 </html>

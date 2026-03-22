@@ -5,6 +5,306 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>로그인 | 맞불</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── 배경 ember glow ── */
+    .login-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+    .login-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 80%, rgba(233,69,96,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 35% at 80% 20%, rgba(245,166,35,0.06) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* ── 로그인 카드 오버라이드 ── */
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      text-align: left;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── 로고 영역 ── */
+    .auth-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 28px;
+    }
+    .auth-logo-title {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #fff 0%, #f5a623 50%, #e94560 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .auth-logo-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+    }
+
+    /* ── 탭 ── */
+    .auth-tabs {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 28px;
+      background: var(--surface2);
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 10px 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      font-family: var(--font);
+      line-height: 1.3;
+      text-align: center;
+    }
+    .auth-tab:hover { color: var(--text); }
+    .auth-tab.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px var(--border);
+      border-radius: 9px;
+    }
+    .auth-tab.active::after {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--accent);
+      margin: 4px auto 0;
+      border-radius: 2px;
+    }
+
+    /* ── 탭 패널 ── */
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
+    /* ── 에러/성공 메시지 ── */
+    .auth-msg {
+      font-size: 0.82rem;
+      margin-top: 10px;
+      min-height: 18px;
+      display: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+    .auth-msg.error {
+      display: block;
+      color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.08);
+      border: 1px solid rgba(255, 107, 107, 0.2);
+    }
+    .auth-msg.success {
+      display: block;
+      color: #4caf8a;
+      background: rgba(76, 175, 138, 0.08);
+      border: 1px solid rgba(76, 175, 138, 0.2);
+    }
+
+    /* ── 법적 동의 체크박스 ── */
+    .consent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 18px 0;
+      padding: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .consent-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .consent-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .consent-item label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .consent-item label .consent-link {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 0;
+    }
+    .consent-item label .consent-link:hover {
+      color: #f5a623;
+    }
+    .consent-notice {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .consent-notice .consent-link {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-size: inherit;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    /* ── 구분선 ── */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Google 버튼 래퍼 ── */
+    .google-section { text-align: center; }
+
+    /* ── 폼 액션 (로그인/가입 버튼) ── */
+    .auth-actions {
+      margin-top: 20px;
+    }
+    .auth-actions .btn-submit {
+      width: 100%;
+    }
+
+    /* ── 전환 링크 ── */
+    .auth-switch {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .auth-switch button {
+      color: var(--accent);
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: inherit;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      padding: 0;
+    }
+
+    /* ── 법적 모달 ── */
+    .legal-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .legal-modal-overlay.open {
+      display: flex;
+    }
+    .legal-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .legal-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .legal-modal-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .legal-modal-close {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+    .legal-modal-close:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+    .legal-modal-body {
+      overflow-y: auto;
+      padding: 20px;
+      flex: 1;
+    }
+    .legal-modal-body pre {
+      font-family: var(--font);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.7;
+    }
+    .legal-loading {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 20px 0;
+    }
+  </style>
 </head>
 <body>
 
@@ -22,29 +322,148 @@
       <a href="index.html?cat=정보" class="nav-link" data-cat="정보">정보</a>
     </div>
     <div class="nav-auth" id="navAuth"></div>
+    <button class="btn-theme-toggle" id="themeToggle" aria-label="테마 전환">
+      <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
   </div>
 </nav>
 
 <div class="login-wrap">
   <div class="login-card">
-    <div style="margin-bottom:16px;display:flex;flex-direction:column;align-items:center;gap:6px">
-      <svg width="44" height="56" viewBox="0 0 18 24" fill="none" aria-hidden="true"><defs><linearGradient id="lgCard" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgCard)"/></svg>
-      <span style="font-size:1.9rem;font-weight:900;letter-spacing:-0.03em;background:linear-gradient(135deg,#fff 0%,#f5a623 55%,#e94560 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1">맞불</span>
-    </div>
-    <p>구글 계정으로 로그인하고<br>논쟁의 세계에 참여해보세요.</p>
-    <button class="btn-google" id="googleLoginBtn">
-      <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.85l6.1-6.1C34.46 3.14 29.48 1 24 1 14.84 1 7.04 6.34 3.33 14.03l7.1 5.52C12.15 13.28 17.62 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.52 24.5c0-1.58-.14-3.1-.4-4.57H24v8.64h12.67c-.55 2.97-2.2 5.48-4.68 7.17l7.18 5.57C43.64 37.29 46.52 31.37 46.52 24.5z"/>
-        <path fill="#FBBC05" d="M10.43 28.45A14.55 14.55 0 0 1 9.5 24c0-1.55.27-3.06.74-4.45l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.92 7.52 2.55 10.74l7.88-6.29z"/>
-        <path fill="#34A853" d="M24 47c5.48 0 10.08-1.81 13.44-4.91l-7.18-5.57c-1.99 1.34-4.54 2.13-6.26 2.13-6.38 0-11.85-3.78-13.57-9.05l-7.88 6.29C7.04 41.66 14.84 47 24 47z"/>
-      </svg>
-      Google로 로그인
-    </button>
 
-    <p style="margin-top:16px;font-size:0.78rem;color:var(--text-muted)">
-      로그인 시 <a href="#" style="color:var(--accent)">이용약관</a>에 동의하는 것으로 간주됩니다.
-    </p>
+    <!-- 로고 -->
+    <div class="auth-logo">
+      <svg width="44" height="56" viewBox="0 0 18 24" fill="none" aria-hidden="true">
+        <defs><linearGradient id="lgCard" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs>
+        <path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgCard)"/>
+      </svg>
+      <span class="auth-logo-title">맞불</span>
+      <span class="auth-logo-sub">사소한 고집의 끝</span>
+    </div>
+
+    <!-- 탭 -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tab-google" role="tab" aria-selected="true" aria-controls="panel-google">Google</button>
+      <button class="auth-tab" id="tab-login" role="tab" aria-selected="false" aria-controls="panel-login">이메일 로그인</button>
+      <button class="auth-tab" id="tab-signup" role="tab" aria-selected="false" aria-controls="panel-signup">이메일 가입</button>
+    </div>
+
+    <!-- 패널 1: Google -->
+    <div class="auth-panel active google-section" id="panel-google" role="tabpanel">
+      <button class="btn-google" id="googleLoginBtn" type="button">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.85l6.1-6.1C34.46 3.14 29.48 1 24 1 14.84 1 7.04 6.34 3.33 14.03l7.1 5.52C12.15 13.28 17.62 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.52 24.5c0-1.58-.14-3.1-.4-4.57H24v8.64h12.67c-.55 2.97-2.2 5.48-4.68 7.17l7.18 5.57C43.64 37.29 46.52 31.37 46.52 24.5z"/>
+          <path fill="#FBBC05" d="M10.43 28.45A14.55 14.55 0 0 1 9.5 24c0-1.55.27-3.06.74-4.45l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.92 7.52 2.55 10.74l7.88-6.29z"/>
+          <path fill="#34A853" d="M24 47c5.48 0 10.08-1.81 13.44-4.91l-7.18-5.57c-1.99 1.34-4.54 2.13-6.26 2.13-6.38 0-11.85-3.78-13.57-9.05l-7.88 6.29C7.04 41.66 14.84 47 24 47z"/>
+        </svg>
+        Google로 계속하기
+      </button>
+      <p class="consent-notice">
+        계속하면
+        <button class="consent-link" id="googleTermsLink" type="button">이용약관</button>
+        및
+        <button class="consent-link" id="googlePrivacyLink" type="button">개인정보처리방침</button>에
+        동의하는 것으로 간주됩니다.
+      </p>
+    </div>
+
+    <!-- 패널 2: 이메일 로그인 -->
+    <div class="auth-panel" id="panel-login" role="tabpanel">
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">이메일</label>
+          <input id="loginEmail" class="form-input" type="email" placeholder="example@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">비밀번호</label>
+          <input id="loginPassword" class="form-input" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required>
+        </div>
+        <div id="loginMsg" class="auth-msg"></div>
+        <div class="auth-actions">
+          <button type="submit" class="btn-submit">로그인</button>
+        </div>
+      </form>
+      <div class="auth-divider">또는</div>
+      <button class="btn-google" id="googleLoginBtn2" type="button" style="width:100%">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.85l6.1-6.1C34.46 3.14 29.48 1 24 1 14.84 1 7.04 6.34 3.33 14.03l7.1 5.52C12.15 13.28 17.62 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.52 24.5c0-1.58-.14-3.1-.4-4.57H24v8.64h12.67c-.55 2.97-2.2 5.48-4.68 7.17l7.18 5.57C43.64 37.29 46.52 31.37 46.52 24.5z"/>
+          <path fill="#FBBC05" d="M10.43 28.45A14.55 14.55 0 0 1 9.5 24c0-1.55.27-3.06.74-4.45l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.92 7.52 2.55 10.74l7.88-6.29z"/>
+          <path fill="#34A853" d="M24 47c5.48 0 10.08-1.81 13.44-4.91l-7.18-5.57c-1.99 1.34-4.54 2.13-6.26 2.13-6.38 0-11.85-3.78-13.57-9.05l-7.88 6.29C7.04 41.66 14.84 47 24 47z"/>
+        </svg>
+        Google로 계속하기
+      </button>
+      <div class="auth-switch">
+        계정이 없으신가요?
+        <button id="switchToSignup" type="button">이메일로 가입</button>
+      </div>
+    </div>
+
+    <!-- 패널 3: 이메일 회원가입 -->
+    <div class="auth-panel" id="panel-signup" role="tabpanel">
+      <form id="signupForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="signupEmail">이메일</label>
+          <input id="signupEmail" class="form-input" type="email" placeholder="example@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="signupPassword">비밀번호</label>
+          <input id="signupPassword" class="form-input" type="password" placeholder="8자 이상" autocomplete="new-password" minlength="8" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="signupPasswordConfirm">비밀번호 확인</label>
+          <input id="signupPasswordConfirm" class="form-input" type="password" placeholder="비밀번호 재입력" autocomplete="new-password" required>
+        </div>
+
+        <!-- 법적 동의 -->
+        <div class="consent-list">
+          <div class="consent-item">
+            <input type="checkbox" id="consentTerms">
+            <label for="consentTerms">
+              [필수]
+              <button class="consent-link" id="openTermsModal" type="button">이용약관</button>에 동의합니다
+            </label>
+          </div>
+          <div class="consent-item">
+            <input type="checkbox" id="consentPrivacy">
+            <label for="consentPrivacy">
+              [필수]
+              <button class="consent-link" id="openPrivacyModal" type="button">개인정보처리방침</button>에 동의합니다
+            </label>
+          </div>
+          <div class="consent-item">
+            <input type="checkbox" id="consentAge">
+            <label for="consentAge">[필수] 만 14세 이상입니다</label>
+          </div>
+        </div>
+
+        <div id="signupMsg" class="auth-msg"></div>
+        <div class="auth-actions">
+          <button type="submit" id="signupBtn" class="btn-submit" disabled>가입하기</button>
+        </div>
+      </form>
+      <div class="auth-switch">
+        이미 계정이 있으신가요?
+        <button id="switchToLogin" type="button">로그인</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 법적 모달 -->
+<div class="legal-modal-overlay" id="legalModal" role="dialog" aria-modal="true">
+  <div class="legal-modal">
+    <div class="legal-modal-header">
+      <h3 id="legalModalTitle">이용약관</h3>
+      <button class="legal-modal-close" id="closeLegalModal" type="button" aria-label="닫기">✕</button>
+    </div>
+    <div class="legal-modal-body">
+      <div class="legal-loading" id="legalLoading">불러오는 중...</div>
+      <pre id="legalContent" style="display:none"></pre>
+    </div>
   </div>
 </div>
 
@@ -52,7 +471,7 @@
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  // If already logged in, redirect (safeRedirectUrl로 오픈 리다이렉트 방지)
+  // 이미 로그인 시 리다이렉트
   getUser().then(user => {
     if (user) {
       const next = new URLSearchParams(location.search).get('next');
@@ -60,17 +479,215 @@
     }
   });
 
-  document.getElementById('googleLoginBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('googleLoginBtn');
+  initAuth();
+
+  // ── 탭 전환 ──
+  const tabs = document.querySelectorAll('.auth-tab');
+  const panels = document.querySelectorAll('.auth-panel');
+
+  function activateTab(tabId) {
+    tabs.forEach(t => {
+      t.classList.toggle('active', t.id === tabId);
+      t.setAttribute('aria-selected', t.id === tabId ? 'true' : 'false');
+    });
+    panels.forEach(p => {
+      p.classList.toggle('active', p.id === tabId.replace('tab-', 'panel-'));
+    });
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => activateTab(tab.id));
+  });
+
+  document.getElementById('switchToSignup').addEventListener('click', () => activateTab('tab-signup'));
+  document.getElementById('switchToLogin').addEventListener('click', () => activateTab('tab-login'));
+
+  // ── Google 로그인 버튼들 ──
+  function handleGoogleLogin(btn) {
     btn.disabled = true;
     btn.style.opacity = '0.7';
-    try {
-      await signInWithGoogle();
-    } catch {
+    signInWithGoogle().catch(() => {
       btn.disabled = false;
       btn.style.opacity = '';
+    });
+  }
+
+  document.getElementById('googleLoginBtn').addEventListener('click', function() {
+    handleGoogleLogin(this);
+  });
+  document.getElementById('googleLoginBtn2').addEventListener('click', function() {
+    handleGoogleLogin(this);
+  });
+
+  // ── 이메일 로그인 ──
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const msg = document.getElementById('loginMsg');
+    msg.className = 'auth-msg';
+    const btn = this.querySelector('button[type="submit"]');
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+      msg.textContent = '이메일과 비밀번호를 입력해주세요.';
+      msg.className = 'auth-msg error';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '로그인 중...';
+    try {
+      await signInWithEmail(email, password);
+      const next = new URLSearchParams(location.search).get('next');
+      location.href = safeRedirectUrl(next, 'index.html');
+    } catch (err) {
+      msg.textContent = err.message === 'Invalid login credentials'
+        ? '이메일 또는 비밀번호가 올바르지 않습니다.'
+        : (err.message || '로그인에 실패했습니다. 다시 시도해주세요.');
+      msg.className = 'auth-msg error';
+      btn.disabled = false;
+      btn.textContent = '로그인';
     }
   });
+
+  // ── 이메일 회원가입 ──
+  // 체크박스 3개 모두 체크 시 버튼 활성화
+  const checkboxes = ['consentTerms', 'consentPrivacy', 'consentAge'];
+  checkboxes.forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const allChecked = checkboxes.every(cid => document.getElementById(cid).checked);
+      document.getElementById('signupBtn').disabled = !allChecked;
+    });
+  });
+
+  document.getElementById('signupForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const msg = document.getElementById('signupMsg');
+    msg.className = 'auth-msg';
+    const btn = document.getElementById('signupBtn');
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirm = document.getElementById('signupPasswordConfirm').value;
+
+    if (!email || !password) {
+      msg.textContent = '이메일과 비밀번호를 입력해주세요.';
+      msg.className = 'auth-msg error';
+      return;
+    }
+    if (password.length < 8) {
+      msg.textContent = '비밀번호는 8자 이상이어야 합니다.';
+      msg.className = 'auth-msg error';
+      return;
+    }
+    if (password !== confirm) {
+      msg.textContent = '비밀번호가 일치하지 않습니다.';
+      msg.className = 'auth-msg error';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+    try {
+      await signUpWithEmail(email, password);
+      msg.textContent = '인증 이메일을 발송했습니다. 이메일을 확인하고 링크를 클릭해주세요.';
+      msg.className = 'auth-msg success';
+      document.getElementById('signupForm').reset();
+      checkboxes.forEach(cid => { document.getElementById(cid).checked = false; });
+    } catch (err) {
+      msg.textContent = err.message || '가입에 실패했습니다. 다시 시도해주세요.';
+      msg.className = 'auth-msg error';
+    } finally {
+      btn.disabled = true; // 재가입 방지, 체크박스 다시 체크해야 활성화
+      btn.textContent = '가입하기';
+    }
+  });
+
+  // ── 법적 모달 ──
+  const legalModal = document.getElementById('legalModal');
+  const legalTitle = document.getElementById('legalModalTitle');
+  const legalContent = document.getElementById('legalContent');
+  const legalLoading = document.getElementById('legalLoading');
+
+  async function openLegal(type) {
+    legalTitle.textContent = type === 'terms' ? '이용약관' : '개인정보처리방침';
+    legalContent.style.display = 'none';
+    legalLoading.style.display = 'block';
+    legalModal.classList.add('open');
+
+    try {
+      const res = await fetch(type === 'terms' ? 'legal/terms.txt' : 'legal/privacy.txt');
+      const text = await res.text();
+      legalContent.textContent = text;
+      legalContent.style.display = 'block';
+      legalLoading.style.display = 'none';
+    } catch {
+      legalContent.textContent = '내용을 불러올 수 없습니다.';
+      legalContent.style.display = 'block';
+      legalLoading.style.display = 'none';
+    }
+  }
+
+  function closeLegal() {
+    legalModal.classList.remove('open');
+  }
+
+  document.getElementById('openTermsModal').addEventListener('click', () => openLegal('terms'));
+  document.getElementById('openPrivacyModal').addEventListener('click', () => openLegal('privacy'));
+  document.getElementById('googleTermsLink').addEventListener('click', () => openLegal('terms'));
+  document.getElementById('googlePrivacyLink').addEventListener('click', () => openLegal('privacy'));
+  document.getElementById('closeLegalModal').addEventListener('click', closeLegal);
+
+  legalModal.addEventListener('click', function(e) {
+    if (e.target === legalModal) closeLegal();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLegal();
+  });
+
+  // 테마 토글
+  (function() {
+    if (localStorage.getItem('matbul-theme') === 'light') document.body.classList.add('light-mode');
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('matbul-theme', isLight ? 'light' : 'dark');
+    });
+  })();
 </script>
+<script src="js/legal-modal.js"></script>
+
+<footer class="site-footer">
+  <div class="ad-banner">
+    <div class="ad-banner-inner">
+      광고 문의: matbul@example.com &nbsp;|&nbsp; 광고 영역 728×90
+    </div>
+  </div>
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-logo">
+        <svg width="16" height="20" viewBox="0 0 18 24" fill="none" aria-hidden="true" style="margin-right:5px"><defs><linearGradient id="lgFl" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgFl)"/></svg>
+        맞불
+      </div>
+      <p class="footer-tagline">사소한 고집의 끝.<br>토론·밸런스게임·퀴즈를<br>공유하는 커뮤니티 플랫폼.</p>
+    </div>
+    <div class="footer-col">
+      <h4>서비스 소개</h4>
+      <ul>
+        <li><a href="infographic.html">맞불 소개</a></li>
+        <li><a href="#" class="footer-link-todo">팀 소개</a></li>
+        <li><a href="mailto:matbul@example.com">문의하기</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>법적 문서</h4>
+      <ul>
+        <li><a href="#" data-legal="terms">이용약관</a></li>
+        <li><a href="#" data-legal="privacy">개인정보처리방침</a></li>
+        <li><a href="#" data-legal="guidelines">커뮤니티 가이드라인</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 맞불. All rights reserved.</div>
+</footer>
 </body>
 </html>

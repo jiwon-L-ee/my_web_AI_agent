@@ -9,10 +9,28 @@ async function signInWithGoogle() {
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: location.origin + '/platform/index.html',
+      redirectTo: location.origin + '/platform/signup-profile.html',
     },
   });
   if (error) alert('로그인 실패: ' + error.message);
+}
+
+async function signUpWithEmail(email, password) {
+  const { data, error } = await db.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: location.origin + '/platform/signup-profile.html',
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function signInWithEmail(email, password) {
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
 }
 
 async function signOut() {
@@ -23,25 +41,46 @@ async function signOut() {
 // Update navbar based on auth state
 async function initAuth() {
   const user = await getUser();
-  updateNavbar(user);
+  await updateNavbar(user);
 
-  db.auth.onAuthStateChange((_event, session) => {
-    updateNavbar(session?.user ?? null);
+  db.auth.onAuthStateChange(async (_event, session) => {
+    await updateNavbar(session?.user ?? null);
   });
 }
 
-function updateNavbar(user) {
+async function updateNavbar(user) {
   const navAuth = document.getElementById('navAuth');
   if (!navAuth) return;
 
   if (user) {
-    const avatar = user.user_metadata?.avatar_url;
+    // profiles + credit_balances 병렬 조회
+    let username = null;
+    let avatarUrl = null;
+    let balance = null;
+    try {
+      const [profileRes, creditRes] = await Promise.all([
+        db.from('profiles').select('username, avatar_url').eq('id', user.id).single(),
+        db.from('credit_balances').select('balance').eq('user_id', user.id).maybeSingle(),
+      ]);
+      if (profileRes.data) {
+        username = profileRes.data.username;
+        avatarUrl = profileRes.data.avatar_url;
+      }
+      if (creditRes.data) {
+        balance = creditRes.data.balance;
+      }
+    } catch (_) {}
+
+    const displayName = username || user.email || '?';
+    const creditHtml = balance !== null
+      ? `<span class="nav-credit" title="크레딧 잔액">${Math.floor(balance)}C</span>`
+      : '';
     navAuth.innerHTML = `
-      <a href="create.html" class="btn-create">+ 만들기</a>
-      <a href="mypage.html" class="nav-avatar" title="${escapeHtml(user.user_metadata?.name ?? user.email)}">
-        ${avatar
-          ? `<img src="${escapeHtml(avatar)}" alt="내 프로필">`
-          : `<span class="avatar-placeholder">${(user.user_metadata?.name ?? user.email ?? '?')[0].toUpperCase()}</span>`
+      ${creditHtml}
+      <a href="mypage.html" class="nav-avatar" title="${escapeHtml(displayName)}">
+        ${avatarUrl
+          ? `<img src="${escapeHtml(avatarUrl)}" alt="내 프로필">`
+          : `<span class="avatar-placeholder">${displayName[0].toUpperCase()}</span>`
         }
       </a>
     `;
@@ -75,6 +114,16 @@ function safeRedirectUrl(url, fallback = 'index.html') {
   } catch {
     return fallback;
   }
+}
+
+// 비로그인 투표용 게스트 ID (localStorage에 UUID 영속 저장)
+function getGuestId() {
+  let gid = localStorage.getItem('matbul_gid');
+  if (!gid) {
+    gid = crypto.randomUUID();
+    localStorage.setItem('matbul_gid', gid);
+  }
+  return gid;
 }
 
 // Format date to relative time

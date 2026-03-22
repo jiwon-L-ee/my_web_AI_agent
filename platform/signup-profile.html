@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프로필 설정 | 맞불</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── 배경 ── */
+    .profile-setup-wrap {
+      min-height: calc(100vh - var(--nav-h));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-setup-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 55% 40% at 15% 85%, rgba(233,69,96,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 35% at 85% 15%, rgba(245,166,35,0.05) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* ── 카드 ── */
+    .profile-setup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── 헤더 ── */
+    .setup-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .setup-header h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .setup-header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .setup-step {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(233,69,96,0.1);
+      border: 1px solid rgba(233,69,96,0.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+      margin-bottom: 12px;
+    }
+
+    /* ── 아바타 업로드 ── */
+    .avatar-upload-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .avatar-preview {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .avatar-preview:hover {
+      border-color: var(--accent);
+    }
+    .avatar-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    .avatar-preview img.visible {
+      display: block;
+    }
+    .avatar-placeholder-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+    }
+    .avatar-placeholder-icon svg {
+      width: 28px;
+      height: 28px;
+      opacity: 0.5;
+    }
+    .avatar-placeholder-icon span {
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
+    }
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+      border-radius: 50%;
+    }
+    .avatar-preview:hover .avatar-overlay {
+      opacity: 1;
+    }
+    .avatar-overlay svg {
+      width: 20px;
+      height: 20px;
+      color: #fff;
+    }
+    #avatarInput { display: none; }
+    .avatar-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .avatar-upload-btn {
+      font-size: 0.78rem;
+      color: var(--accent);
+      background: none;
+      border: 1px solid rgba(233,69,96,0.3);
+      border-radius: 6px;
+      padding: 5px 14px;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all 0.15s;
+    }
+    .avatar-upload-btn:hover {
+      background: rgba(233,69,96,0.08);
+      border-color: var(--accent);
+    }
+
+    /* ── 메시지 ── */
+    .setup-msg {
+      font-size: 0.82rem;
+      margin-top: 10px;
+      min-height: 18px;
+      display: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+    .setup-msg.error {
+      display: block;
+      color: #ff6b6b;
+      background: rgba(255,107,107,0.08);
+      border: 1px solid rgba(255,107,107,0.2);
+    }
+    .setup-msg.success {
+      display: block;
+      color: #4caf8a;
+      background: rgba(76,175,138,0.08);
+      border: 1px solid rgba(76,175,138,0.2);
+    }
+
+    /* ── 액션 ── */
+    .setup-actions {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .setup-actions .btn-submit {
+      width: 100%;
+    }
+    .btn-skip {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      padding: 4px;
+      transition: color 0.15s;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .btn-skip:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 480px) {
+      .profile-setup-card { padding: 28px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg class="logo-flame-sm" width="18" height="24" viewBox="0 0 18 24" fill="none" aria-hidden="true"><defs><linearGradient id="lgNav" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgNav)"/></svg>
+      <span class="logo-wordmark">맞불</span>
+    </a>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</nav>
+
+<div class="profile-setup-wrap">
+  <div class="profile-setup-card">
+    <div class="setup-header">
+      <div class="setup-step">프로필 설정</div>
+      <h1>맞불에 오신 것을 환영합니다 🔥</h1>
+      <p>닉네임과 프로필 사진을 설정하고<br>논쟁의 세계에 참여해보세요.</p>
+    </div>
+
+    <form id="profileSetupForm" novalidate>
+
+      <!-- 아바타 업로드 -->
+      <div class="avatar-upload-wrap">
+        <div class="avatar-preview" id="avatarPreviewArea" role="button" tabindex="0" aria-label="프로필 사진 업로드">
+          <div class="avatar-placeholder-icon" id="avatarPlaceholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+            <span>사진 선택</span>
+          </div>
+          <img id="avatarPreviewImg" src="" alt="프로필 미리보기">
+          <div class="avatar-overlay" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M3 9a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 10.07 4h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 18.07 7H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+          </div>
+        </div>
+        <button type="button" class="avatar-upload-btn" id="avatarUploadBtn">사진 업로드</button>
+        <input type="file" id="avatarInput" accept="image/*">
+        <p class="avatar-hint">선택 사항 · JPG, PNG, GIF (최대 5MB)</p>
+      </div>
+
+      <!-- 닉네임 -->
+      <div class="form-group">
+        <label class="form-label" for="setupUsername">닉네임 <span style="color:var(--accent)">*</span></label>
+        <input id="setupUsername" class="form-input" type="text" placeholder="사용할 닉네임을 입력하세요" maxlength="20" autocomplete="nickname" required>
+      </div>
+
+      <!-- 자기소개 -->
+      <div class="form-group">
+        <label class="form-label" for="setupBio">자기소개 <span style="color:var(--text-muted);font-weight:400">(선택)</span></label>
+        <textarea id="setupBio" class="form-textarea" placeholder="한 줄로 자신을 소개해보세요." maxlength="200"></textarea>
+      </div>
+
+      <div id="setupMsg" class="setup-msg"></div>
+
+      <div class="setup-actions">
+        <button type="submit" id="setupSubmitBtn" class="btn-submit">프로필 저장하고 시작하기</button>
+        <button type="button" id="setupSkipBtn" class="btn-skip">나중에 설정하기</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/signup-profile.js"></script>
+
+<footer class="site-footer">
+  <div class="ad-banner">
+    <div class="ad-banner-inner">
+      광고 문의: matbul@example.com &nbsp;|&nbsp; 광고 영역 728×90
+    </div>
+  </div>
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-logo">🔥 맞불</div>
+      <p class="footer-tagline">사소한 고집의 끝.<br>토론·밸런스게임·퀴즈를<br>공유하는 커뮤니티 플랫폼.</p>
+    </div>
+    <div class="footer-col">
+      <h4>서비스 소개</h4>
+      <ul>
+        <li><a href="#">맞불 소개</a></li>
+        <li><a href="#">팀 소개</a></li>
+        <li><a href="#">문의하기</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>법적 문서</h4>
+      <ul>
+        <li><a href="#">이용약관</a></li>
+        <li><a href="#">개인정보처리방침</a></li>
+        <li><a href="#">커뮤니티 가이드라인</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 맞불. All rights reserved.</div>
+</footer>
+</body>
+</html>

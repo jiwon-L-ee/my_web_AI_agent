@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>퀴즈 | 맞불</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Quiz Player ─────────────────────────────────────── */
+    .quiz-header {
+      padding: 28px 0 20px;
+    }
+    .quiz-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .quiz-progress-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .quiz-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+    .quiz-progress-text {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+      letter-spacing: 0.5px;
+    }
+    .quiz-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .quiz-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 16px;
+      line-height: 1.4;
+    }
+    .quiz-type-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+    .quiz-type-badge.type-ox        { background: rgba(245,166,35,0.15);  color: var(--orange); border: 1px solid rgba(245,166,35,0.3); }
+    .quiz-type-badge.type-multiple  { background: rgba(47,128,237,0.15);  color: var(--blue);   border: 1px solid rgba(47,128,237,0.3); }
+    .quiz-type-badge.type-short     { background: rgba(74,222,128,0.15);  color: #4ade80;       border: 1px solid rgba(74,222,128,0.3); }
+    .quiz-type-badge.type-subjective{ background: rgba(233,69,96,0.15);   color: var(--accent); border: 1px solid rgba(233,69,96,0.3); }
+
+    /* ── Question Card ─────────────────────────────────────── */
+    .question-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 28px;
+      margin-bottom: 24px;
+    }
+    .question-number {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .question-text {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+
+    /* ── OX Options ─────────────────────────────────────── */
+    .ox-options {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .ox-btn {
+      width: 88px;
+      height: 88px;
+      font-size: 2.4rem;
+      font-weight: 900;
+      border-radius: 50%;
+      border: 2px solid;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      font-family: var(--font);
+    }
+    .ox-btn:active { transform: scale(0.95); }
+    .ox-btn-o {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .ox-btn-o:hover { background: rgba(47,128,237,0.15); }
+    .ox-btn-o.selected {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(47,128,237,0.4);
+    }
+    .ox-btn-x {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .ox-btn-x:hover { background: rgba(233,69,96,0.15); }
+    .ox-btn-x.selected {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(233,69,96,0.4);
+    }
+    .ox-btn:disabled { opacity: 0.6; cursor: default; pointer-events: none; }
+
+    /* ── Multiple Choice ─────────────────────────────────────── */
+    .multiple-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .multiple-btn {
+      width: 100%;
+      padding: 14px 18px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      font-size: 0.95rem;
+      font-family: var(--font);
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .multiple-btn:hover:not(:disabled) { border-color: var(--text-muted); }
+    .multiple-btn:disabled { cursor: default; }
+    .multiple-btn.selected { border-color: var(--accent); }
+    .multiple-btn.correct  { border-color: #4ade80; background: rgba(74,222,128,0.1); }
+    .multiple-btn.wrong    { border-color: var(--accent); background: rgba(233,69,96,0.1); }
+    .multiple-label {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .multiple-btn.selected .multiple-label { background: var(--accent); color: #fff; }
+    .multiple-btn.correct  .multiple-label { background: #4ade80; color: #0d1117; }
+    .multiple-btn.wrong    .multiple-label { background: var(--accent); color: #fff; }
+
+    /* ── Text / Subjective Input ─────────────────────────────────────── */
+    .text-option,
+    .subjective-option {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .quiz-text-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: var(--font);
+      box-sizing: border-box;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .quiz-text-input:focus { border-color: var(--text-muted); }
+    .quiz-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: var(--font);
+      min-height: 120px;
+      resize: vertical;
+      box-sizing: border-box;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .quiz-textarea:focus { border-color: var(--text-muted); }
+    .quiz-submit-btn {
+      align-self: flex-start;
+      padding: 12px 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .quiz-submit-btn:hover { opacity: 0.88; }
+    .quiz-submit-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Answer Feedback ─────────────────────────────────────── */
+    .answer-feedback {
+      margin-top: 24px;
+      padding: 20px;
+      background: var(--surface2);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      animation: fadeIn 0.25s ease;
+    }
+    .answer-feedback.correct { border-color: #4ade80; }
+    .answer-feedback.wrong   { border-color: var(--accent); }
+    .answer-feedback.subjective-reveal { border-color: var(--border); }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+    .feedback-icon {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 6px;
+      line-height: 1;
+    }
+    .feedback-text {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .correct-answer-reveal {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 4px;
+    }
+    .correct-answer-reveal strong { color: var(--text); }
+    .quiz-next-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.95rem;
+      font-family: var(--font);
+      cursor: pointer;
+      margin-top: 16px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .quiz-next-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Result Screen ─────────────────────────────────────── */
+    .result-wrap {
+      padding: 40px 0;
+    }
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 32px 36px;
+      text-align: center;
+    }
+    .result-score-big {
+      font-size: 4.5rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .result-score-denom {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .result-message {
+      font-size: 1.1rem;
+      color: var(--text);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .result-sub {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+    .result-breakdown {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 32px;
+      padding: 16px;
+      background: var(--surface2);
+      border-radius: 10px;
+    }
+    .result-stat {
+      text-align: center;
+    }
+    .result-stat-num {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .result-stat-num.correct-num { color: #4ade80; }
+    .result-stat-num.wrong-num   { color: var(--accent); }
+    .result-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .btn-back {
+      display: block;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: opacity 0.15s;
+    }
+    .btn-back:hover { opacity: 0.88; }
+    .btn-post-link {
+      display: block;
+      margin-top: 10px;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-post-link:hover { border-color: var(--text-muted); color: var(--text); }
+
+    /* ── No questions state ─────────────────────────────────────── */
+    .quiz-empty {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+    .quiz-empty p { margin-top: 10px; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg class="logo-flame-sm" width="18" height="24" viewBox="0 0 18 24" fill="none" aria-hidden="true">
+        <defs><linearGradient id="lgNav" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs>
+        <path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgNav)"/>
+      </svg>
+      <span class="logo-wordmark">맞불</span>
+    </a>
+    <div class="nav-center">
+      <a href="index.html" class="nav-link" data-cat="밸런스게임">홈</a>
+      <a href="index.html?cat=토론" class="nav-link" data-cat="토론">토론</a>
+      <a href="index.html?cat=퀴즈" class="nav-link active" data-cat="퀴즈">퀴즈</a>
+      <a href="index.html?cat=커뮤니티" class="nav-link" data-cat="커뮤니티">커뮤니티</a>
+      <a href="index.html?cat=정보" class="nav-link" data-cat="정보">정보</a>
+    </div>
+    <div class="nav-auth" id="navAuth">
+      <a href="login.html" class="btn-login">로그인</a>
+    </div>
+    <button class="btn-theme-toggle" id="themeToggle" aria-label="테마 전환">
+      <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+</nav>
+
+<div class="page-narrow">
+  <!-- 로딩 -->
+  <div id="quizLoading" class="spinner-wrap"><div class="spinner"></div></div>
+
+  <!-- 퀴즈 메인 -->
+  <div id="quizMain" style="display:none">
+    <div class="quiz-header">
+      <div class="quiz-progress-row">
+        <div class="quiz-progress-bar">
+          <div id="progressFill" class="quiz-progress-fill"></div>
+        </div>
+        <div id="progressText" class="quiz-progress-text">1 / 1</div>
+      </div>
+      <div class="quiz-meta">
+        <span id="quizTypeBadge" class="quiz-type-badge"></span>
+      </div>
+      <h1 id="quizTitle" class="quiz-title"></h1>
+    </div>
+
+    <div id="questionCard" class="question-card">
+      <div id="questionNumber" class="question-number"></div>
+      <div id="questionText" class="question-text"></div>
+
+      <!-- OX -->
+      <div id="oxOptions" class="ox-options" style="display:none">
+        <button class="ox-btn ox-btn-o" data-answer="O">O</button>
+        <button class="ox-btn ox-btn-x" data-answer="X">X</button>
+      </div>
+
+      <!-- 객관식 -->
+      <div id="multipleOptions" class="multiple-options" style="display:none"></div>
+
+      <!-- 단답형 -->
+      <div id="textOption" class="text-option" style="display:none">
+        <input id="textAnswer" class="quiz-text-input" type="text" placeholder="정답을 입력하세요" autocomplete="off">
+        <button id="textSubmitBtn" class="quiz-submit-btn">제출</button>
+      </div>
+
+      <!-- 주관식 -->
+      <div id="subjectiveOption" class="subjective-option" style="display:none">
+        <textarea id="subjectiveAnswer" class="quiz-textarea" placeholder="자유롭게 작성하세요" rows="4"></textarea>
+        <button id="subjectiveSubmitBtn" class="quiz-submit-btn">제출 후 모범답안 보기</button>
+      </div>
+
+      <!-- 피드백 -->
+      <div id="answerFeedback" class="answer-feedback" style="display:none">
+        <div id="feedbackIcon" class="feedback-icon"></div>
+        <div id="feedbackText" class="feedback-text"></div>
+        <div id="correctAnswerReveal" class="correct-answer-reveal" style="display:none"></div>
+        <button id="nextBtn" class="quiz-next-btn">다음 문제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 결과 화면 -->
+  <div id="quizResult" class="result-wrap" style="display:none">
+    <div class="result-card">
+      <div id="resultScore" class="result-score-big"></div>
+      <div id="resultScoreDenom" class="result-score-denom"></div>
+      <div id="resultMessage" class="result-message"></div>
+      <div id="resultSub" class="result-sub"></div>
+      <div id="resultBreakdown" class="result-breakdown"></div>
+      <a id="resultBackBtn" href="index.html?cat=퀴즈" class="btn-back">퀴즈 목록으로</a>
+      <a id="resultPostLink" href="#" class="btn-post-link">게시물로 돌아가기</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/legal-modal.js"></script>
+<script>
+  (function() {
+    if (localStorage.getItem('matbul-theme') === 'light') document.body.classList.add('light-mode');
+    document.getElementById('themeToggle')?.addEventListener('click', function() {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('matbul-theme', isLight ? 'light' : 'dark');
+    });
+  })();
+</script>
+
+<footer class="site-footer">
+  <div class="ad-banner">
+    <div class="ad-banner-inner">
+      광고 문의: matbul@example.com &nbsp;|&nbsp; 광고 영역 728×90
+    </div>
+  </div>
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-logo">
+        <svg width="16" height="20" viewBox="0 0 18 24" fill="none" aria-hidden="true" style="margin-right:5px"><defs><linearGradient id="lgFq" x1="9" y1="24" x2="9" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#e94560"/><stop offset="55%" stop-color="#f5a623"/><stop offset="100%" stop-color="#ffe170"/></linearGradient></defs><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z" fill="url(#lgFq)"/></svg>
+        맞불
+      </div>
+      <p class="footer-tagline">사소한 고집의 끝.<br>토론·밸런스게임·퀴즈를<br>공유하는 커뮤니티 플랫폼.</p>
+    </div>
+    <div class="footer-col">
+      <h4>서비스 소개</h4>
+      <ul>
+        <li><a href="infographic.html">맞불 소개</a></li>
+        <li><a href="#" class="footer-link-todo">팀 소개</a></li>
+        <li><a href="mailto:matbul@example.com">문의하기</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>법적 문서</h4>
+      <ul>
+        <li><a href="#" data-legal="terms">이용약관</a></li>
+        <li><a href="#" data-legal="privacy">개인정보처리방침</a></li>
+        <li><a href="#" data-legal="guidelines">커뮤니티 가이드라인</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 맞불. All rights reserved.</div>
+</footer>
+</body>
+</html>
