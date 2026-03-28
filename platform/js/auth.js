@@ -158,6 +158,82 @@ function getGuestId() {
   return gid;
 }
 
+// ── 사이드 드로어 ──────────────────────────────────────────────
+function initDrawer() {
+  const hamburgerBtn   = document.getElementById('hamburgerBtn');
+  const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+  const navDrawer      = document.getElementById('navDrawer');
+  const navOverlay     = document.getElementById('navOverlay');
+  if (!hamburgerBtn || !navDrawer) return;
+
+  function openDrawer() {
+    navDrawer.classList.add('open');
+    navOverlay.classList.add('open');
+    hamburgerBtn.classList.add('open');
+    hamburgerBtn.setAttribute('aria-expanded', 'true');
+    navDrawer.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDrawer() {
+    navDrawer.classList.remove('open');
+    navOverlay.classList.remove('open');
+    hamburgerBtn.classList.remove('open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+    navDrawer.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  hamburgerBtn.addEventListener('click', openDrawer);
+  drawerCloseBtn?.addEventListener('click', closeDrawer);
+  navOverlay.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  // 스와이프 제스처
+  let touchStartX = 0;
+  let touchStartY = 0;
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (touchStartX < 30 && dx > 60) openDrawer();
+    if (navDrawer.classList.contains('open') && dx < -60) closeDrawer();
+  }, { passive: true });
+
+  // 드로어 내 테마 토글
+  const drawerThemeBtn = document.getElementById('drawerThemeBtn');
+  drawerThemeBtn?.addEventListener('click', () => {
+    const isLight = document.body.classList.toggle('light-mode');
+    localStorage.setItem('matbul-theme', isLight ? 'light' : 'dark');
+    updateDrawerThemeLabel();
+  });
+
+  setDrawerActiveByUrl();
+  updateDrawerThemeLabel();
+}
+
+function setDrawerActiveByUrl() {
+  const path = location.pathname;
+  const cat  = new URLSearchParams(location.search).get('cat');
+  document.querySelectorAll('.nav-drawer-link').forEach(a => a.classList.remove('active'));
+  if (path.includes('ranking.html')) {
+    document.querySelector('.nav-drawer-link[data-page="ranking"]')?.classList.add('active');
+  } else if (!path.includes('.html') || path.includes('index.html')) {
+    const activeCat = cat || '밸런스게임';
+    document.querySelector(`.nav-drawer-link[data-cat="${activeCat}"]`)?.classList.add('active');
+  }
+}
+
+function updateDrawerThemeLabel() {
+  const label = document.querySelector('.drawer-theme-label');
+  if (!label) return;
+  const isLight = document.body.classList.contains('light-mode');
+  label.textContent = isLight ? '다크 모드' : '라이트 모드';
+}
+
 // Format date to relative time
 function relativeTime(iso) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -170,3 +246,6 @@ function relativeTime(iso) {
   if (d < 30) return `${d}일 전`;
   return new Date(iso).toLocaleDateString('ko-KR');
 }
+
+// DOM 로드 후 드로어 초기화
+document.addEventListener('DOMContentLoaded', initDrawer);

@@ -1394,6 +1394,11 @@ function readUrlParams() {
     btn.classList.toggle('active', cat === currentCategory);
   });
 
+  // 드로어 링크 active 동기화
+  document.querySelectorAll('.nav-drawer-link[data-cat]').forEach(a => {
+    a.classList.toggle('active', a.dataset.cat === currentCategory);
+  });
+
   // 밸런스게임 홈 vs 다른 카테고리 레이아웃 전환
   const isHome = currentCategory === '밸런스게임';
   if (sortBarEl)   sortBarEl.style.display   = isHome ? 'none' : '';
@@ -1429,18 +1434,8 @@ if (sortDirBtn) {
   });
 }
 
-// 모바일 카테고리 셀렉트 연동
-const catSelectMobile = document.getElementById('catSelectMobile');
-if (catSelectMobile) {
-  catSelectMobile.addEventListener('change', () => {
-    const cat = catSelectMobile.value;
-    location.href = cat ? `index.html?cat=${encodeURIComponent(cat)}` : 'index.html';
-  });
-}
-
 // Init
 readUrlParams();
-if (catSelectMobile) catSelectMobile.value = currentCategory;
 initAuth();
 (async () => {
   currentUser = await getUser();

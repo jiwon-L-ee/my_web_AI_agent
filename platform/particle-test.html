@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>파티클 타입 확인</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8eaf0;
+    --text-muted: rgba(255,255,255,0.45);
+    --accent: #6c63ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 400;
+  }
+  .sub {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 40px;
+    opacity: 0.6;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .demo-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .demo-label {
+    text-align: center;
+    font-size: 0.82rem;
+  }
+  .heat-tag-1 { color: rgba(255,165,62,0.58); }
+  .heat-tag-2 { color: rgba(216,92,16,0.92); }
+  .heat-tag-3 { color: #ff6928; }
+  .demo-stats {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  /* ── 카드 ── */
+  .card-wrap {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    aspect-ratio: 4/3;
+  }
+  .card-arena {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+  }
+  .card-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .card-side-a { background: rgba(99,102,241,0.12); color: #818cf8; }
+  .card-side-b { background: rgba(245,101,39,0.10); color: #f97316; }
+  .card-vs {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    z-index: 4;
+  }
+  .card-option {
+    font-size: 0.78rem;
+    font-weight: 600;
+    opacity: 0.85;
+  }
+  .card-pct {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  canvas.spark {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* heat 애니메이션 */
+  @keyframes heatShimmer1 {
+    0%,100% { box-shadow: 0 0 0 0 transparent; }
+    50%      { box-shadow: 0 0 16px 2px rgba(255,140,0,0.10); }
+  }
+  @keyframes smokeRise2 {
+    0%,100% { box-shadow: 0 0 0 0 transparent; }
+    50%      { box-shadow: 0 0 22px 4px rgba(255,100,0,0.20); }
+  }
+  @keyframes fireRage3 {
+    0%,100% { box-shadow: 0 0 0 0 transparent; }
+    50%      { box-shadow: 0 0 30px 8px rgba(255,60,0,0.36); }
+  }
+  .heat-1 .card-wrap { animation: heatShimmer1 3.8s ease-in-out infinite; }
+  .heat-2 .card-wrap { animation: smokeRise2 2.6s ease-in-out infinite; }
+  .heat-3 .card-wrap { animation: fireRage3 1.4s ease-in-out infinite; }
+
+  /* 파티클 수 표시 */
+  .particle-info {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 6px 0 0;
+    opacity: 0.55;
+  }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; max-width: 320px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>파티클 타입 확인</h1>
+<p class="sub">조회수·좋아요 기준으로 열기(heat) 단계가 결정됩니다</p>
+
+<div class="grid">
+
+  <!-- Heat 1 -->
+  <div class="demo-wrap heat-1">
+    <div class="demo-label heat-tag-1">달아오르는 중</div>
+    <div class="demo-stats">조회 30+ 또는 좋아요 5+</div>
+    <div class="card-wrap">
+      <div class="card-arena">
+        <div class="card-side card-side-a">
+          <div class="card-option">치킨</div>
+          <div class="card-pct">52%</div>
+        </div>
+        <div class="card-side card-side-b">
+          <div class="card-option">피자</div>
+          <div class="card-pct">48%</div>
+        </div>
+        <div class="card-vs">VS</div>
+        <canvas class="spark" data-heat="1"></canvas>
+      </div>
+    </div>
+    <div class="particle-info">연기만 · 6개</div>
+  </div>
+
+  <!-- Heat 2 -->
+  <div class="demo-wrap heat-2">
+    <div class="demo-label heat-tag-2">뜨거운 논쟁</div>
+    <div class="demo-stats">조회 100+ 또는 좋아요 15+</div>
+    <div class="card-wrap">
+      <div class="card-arena">
+        <div class="card-side card-side-a">
+          <div class="card-option">치킨</div>
+          <div class="card-pct">57%</div>
+        </div>
+        <div class="card-side card-side-b">
+          <div class="card-option">피자</div>
+          <div class="card-pct">43%</div>
+        </div>
+        <div class="card-vs">VS</div>
+        <canvas class="spark" data-heat="2"></canvas>
+      </div>
+    </div>
+    <div class="particle-info">연기 70% + 불씨 30% · 16개</div>
+  </div>
+
+  <!-- Heat 3 -->
+  <div class="demo-wrap heat-3">
+    <div class="demo-label heat-tag-3">전쟁 중</div>
+    <div class="demo-stats">조회 500+ 또는 좋아요 50+</div>
+    <div class="card-wrap">
+      <div class="card-arena">
+        <div class="card-side card-side-a">
+          <div class="card-option">치킨</div>
+          <div class="card-pct">63%</div>
+        </div>
+        <div class="card-side card-side-b">
+          <div class="card-option">피자</div>
+          <div class="card-pct">37%</div>
+        </div>
+        <div class="card-vs">VS</div>
+        <canvas class="spark" data-heat="3"></canvas>
+      </div>
+    </div>
+    <div class="particle-info">불씨 70% + 연기 30% · 38개</div>
+  </div>
+
+</div>
+
+<script>
+class CardParticle {
+  constructor(canvas, heat) {
+    this.canvas = canvas;
+    this.heat = heat;
+    this.reset(true);
+  }
+
+  reset(init = false) {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    this.x  = w * 0.05 + Math.random() * w * 0.9;
+    this.y  = init
+      ? h * (0.2 + Math.random() * 0.8)
+      : h * (0.6 + Math.random() * 0.4);
+
+    const speed = this.heat === 3 ? 0.6 + Math.random() * 1.6
+                : this.heat === 2 ? 0.3 + Math.random() * 0.9
+                :                   0.15 + Math.random() * 0.45;
+    this.vx = (Math.random() - 0.5) * (this.heat === 3 ? 1.0 : 0.4);
+    this.vy = -speed;
+
+    this.life  = init ? Math.random() : 1;
+    this.decay = this.heat === 3 ? 0.010 + Math.random() * 0.014
+               : this.heat === 2 ? 0.006 + Math.random() * 0.009
+               :                   0.003 + Math.random() * 0.005;
+
+    this.size = this.heat === 3 ? 1.0 + Math.random() * 2.2
+              : this.heat === 2 ? 1.5 + Math.random() * 2.8
+              :                   2.2 + Math.random() * 3.5;
+
+    const emberChance = this.heat === 3 ? 0.70 : this.heat === 2 ? 0.30 : 0;
+    this.isEmber = Math.random() < emberChance;
+    this.hue = 10 + Math.random() * 35;
+  }
+
+  update() {
+    this.x += this.vx + (Math.random() - 0.5) * 0.25;
+    this.y += this.vy;
+    this.vy *= 0.992;
+    this.life -= this.decay;
+    if (this.life <= 0 || this.y < -this.size * 3) this.reset();
+  }
+
+  draw(ctx) {
+    if (this.life <= 0) return;
+    const alpha = Math.min(this.life, 1);
+    const r = this.size;
+    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * 2.8);
+
+    if (this.isEmber) {
+      g.addColorStop(0,    `hsla(${this.hue},     100%, 88%, ${alpha * 0.95})`);
+      g.addColorStop(0.35, `hsla(${this.hue + 10}, 95%, 60%, ${alpha * 0.65})`);
+      g.addColorStop(0.7,  `hsla(${this.hue + 20}, 85%, 35%, ${alpha * 0.28})`);
+      g.addColorStop(1,    `hsla(${this.hue + 25}, 75%, 20%, 0)`);
+    } else {
+      const s = alpha * 0.18;
+      g.addColorStop(0,   `rgba(175, 185, 200, ${s * 1.4})`);
+      g.addColorStop(0.5, `rgba(155, 165, 182, ${s})`);
+      g.addColorStop(1,   `rgba(140, 150, 168, 0)`);
+    }
+
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r * 2.8, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+}
+
+const particleMap = new Map();
+
+function init() {
+  document.querySelectorAll('canvas.spark').forEach(canvas => {
+    const heat = parseInt(canvas.dataset.heat) || 0;
+    if (heat < 1) return;
+    canvas.width  = canvas.offsetWidth  || 300;
+    canvas.height = canvas.offsetHeight || 225;
+    const count = heat === 3 ? 38 : heat === 2 ? 16 : 6;
+    particleMap.set(canvas, Array.from({ length: count }, () => new CardParticle(canvas, heat)));
+  });
+  tick();
+}
+
+function tick() {
+  particleMap.forEach((particles, canvas) => {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+  });
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
