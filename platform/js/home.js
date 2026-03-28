@@ -84,7 +84,7 @@ async function loadPosts(reset = true) {
     .from('posts')
     .select(
       'id,title,category,quiz_type,thumbnail_url,view_count,created_at,option_a,option_b,expires_at,' +
-      'profiles(username,avatar_url),likes(count),comments(count),votes(count)',
+      'profiles(username,avatar_url,is_admin),likes(count),comments(count),votes(count)',
       { count: 'exact' }
     )
     .order(currentSort, { ascending: currentSortAsc })
@@ -417,7 +417,7 @@ async function loadQuizPreview() {
 async function loadCommunityPreview() {
   const { data } = await db
     .from('posts')
-    .select('id,title,description,thumbnail_url,view_count,created_at,user_id,profiles(username,avatar_url),comments(count),likes(count)')
+    .select('id,title,description,thumbnail_url,view_count,created_at,user_id,profiles(username,avatar_url,is_admin),comments(count),likes(count)')
     .eq('category', '커뮤니티')
     .order('created_at', { ascending: false })
     .limit(4);
@@ -470,7 +470,7 @@ async function loadCommunityListPage(reset = true) {
   const to   = from + PAGE_SIZE - 1;
 
   const COMMUNITY_SELECT = 'id,title,description,thumbnail_url,view_count,created_at,user_id,is_notice,' +
-    'profiles(username,avatar_url),comments(count),likes(count)';
+    'profiles(username,avatar_url,is_admin),comments(count),likes(count)';
 
   // 공지 먼저 별도 조회 — 페이지네이션 무관, 항상 상단 고정
   const { data: noticeData } = await db
@@ -960,11 +960,22 @@ function startHomeExpiryTimers() {
   }
 
   const urgent = tick(); // 즉시 1회 실행
+  let _urgentMode = urgent;
   _homeTimerId = setInterval(() => {
     const hasUrgent = tick();
-    if (hasUrgent) {
+    if (hasUrgent && !_urgentMode) {
+      // 60s → 1s 전환
+      _urgentMode = true;
       clearInterval(_homeTimerId);
-      _homeTimerId = setInterval(tick, 1_000);
+      _homeTimerId = setInterval(() => {
+        const stillUrgent = tick();
+        if (!stillUrgent) {
+          // 1s → 60s 복귀 (긴급 항목 모두 만료)
+          _urgentMode = false;
+          clearInterval(_homeTimerId);
+          _homeTimerId = setInterval(() => { tick(); }, 60_000);
+        }
+      }, 1_000);
     }
   }, urgent ? 1_000 : 60_000);
 }
@@ -1231,7 +1242,7 @@ function renderDefaultCard(post, likeCount, commentCount, author, hotClass) {
         ${buildQuizTypeBadge(post)}
         <div class="card-title">${escapeHtml(post.title)}</div>
         <div class="card-meta">
-          <div class="card-author${post.user_id ? ' card-author-link' : ''}"${post.user_id ? ` data-profile-id="${escapeHtml(post.user_id)}" role="button" tabindex="0" title="프로필 보기"` : ''}>
+          <div class="card-author${post.user_id && !author?.is_admin ? ' card-author-link' : ''}"${post.user_id && !author?.is_admin ? ` data-profile-id="${escapeHtml(post.user_id)}" role="button" tabindex="0" title="프로필 보기"` : ''}>
             ${author?.avatar_url
               ? `<img class="card-author-avatar" src="${escapeHtml(author.avatar_url)}" alt="">`
               : `<span class="card-author-avatar" style="display:inline-flex;align-items:center;justify-content:center;background:var(--surface2);font-size:0.7rem;">${escapeHtml((author?.username ?? '?')[0])}</span>`

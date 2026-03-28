@@ -123,11 +123,16 @@ async function loadAndRenderResult() {
   // 미정산 게임 → Edge Function 호출 후 재조회
   if (!result) {
     try {
+      const { data: { session } } = await db.auth.getSession();
       await fetch(
         'https://mwsfzxhblboskdlffsxi.supabase.co/functions/v1/settle-balance-games',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token ?? ''}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
           body: JSON.stringify({ post_id: postId }),
         }
       );
@@ -291,7 +296,7 @@ async function init() {
 async function loadPost() {
   const { data, error } = await db
     .from('posts')
-    .select('*,profiles(id,username,avatar_url),likes(count),comments(count)')
+    .select('*,profiles(id,username,avatar_url,is_admin),likes(count),comments(count)')
     .eq('id', postId)
     .single();
 
@@ -334,7 +339,7 @@ async function renderPost(p) {
   document.getElementById('commentCount').textContent = commentCount;
 
   const authorLink = document.getElementById('authorLink');
-  if (author?.id) {
+  if (author?.id && !author?.is_admin) {
     authorLink.href = `profile.html?id=${escapeHtml(author.id)}`;
   } else {
     authorLink.removeAttribute('href');
@@ -651,7 +656,7 @@ async function applyVoteChange(dbChoice, isGuest, guestId, persuasionCommentId) 
   canPersuasionLike = false;
   myPersuasionLikeId = null;
   myPersuasionCommentId = null;
-  if (myComment) {
+  if (myComment && currentUser) {
     await db.from('comments')
       .delete()
       .eq('id', myComment.id)
@@ -880,6 +885,7 @@ async function loadMyComment() {
     .select('id,content,side')
     .eq('post_id', postId)
     .eq('user_id', currentUser.id)
+    .is('parent_id', null)
     .maybeSingle();
   myComment = data ?? null;
 }
@@ -1046,7 +1052,7 @@ function renderCommentItem(c, myLikedCommentIds, isVotePost, repliesByParent = {
     ? `<div class="rebuttal-form-wrap" data-parent-id="${c.id}" data-reply-id="${c.id}"></div>`
     : '';
 
-  const profileHref = c.user_id ? `profile.html?id=${escapeHtml(c.user_id)}` : null;
+  const profileHref = c.user_id && !c.profiles?.is_admin ? `profile.html?id=${escapeHtml(c.user_id)}` : null;
 
   const avatarHtml = author?.avatar_url
     ? `<img class="comment-avatar" src="${escapeHtml(author.avatar_url)}" alt="${escapeHtml(author.username ?? '유저')} 아바타">`
@@ -1091,7 +1097,7 @@ function renderReplyItem(r, myLikedCommentIds) {
   const likeCount = r.comment_likes?.[0]?.count ?? 0;
   const liked  = myLikedCommentIds.has(r.id);
 
-  const profileHref = r.user_id ? `profile.html?id=${escapeHtml(r.user_id)}` : null;
+  const profileHref = r.user_id && !r.profiles?.is_admin ? `profile.html?id=${escapeHtml(r.user_id)}` : null;
   const avatarHtml = author?.avatar_url
     ? `<img class="comment-avatar comment-avatar-sm" src="${escapeHtml(author.avatar_url)}" alt="${escapeHtml(author.username ?? '유저')} 아바타">`
     : `<div class="comment-avatar comment-avatar-sm" style="display:flex;align-items:center;justify-content:center;background:var(--surface2);font-size:0.65rem;font-weight:700;">${escapeHtml((author?.username ?? '?')[0])}</div>`;
@@ -1145,7 +1151,7 @@ function renderReplyItem(r, myLikedCommentIds) {
 async function loadComments() {
   const { data, error } = await db
     .from('comments')
-    .select('*,profiles(username,avatar_url),comment_likes(count),persuasion_likes(count)')
+    .select('*,profiles(username,avatar_url,is_admin),comment_likes(count),persuasion_likes(count)')
     .eq('post_id', postId)
     .is('parent_id', null)
     .order('created_at', { ascending: true });
@@ -1168,7 +1174,7 @@ async function loadComments() {
   // 덧글(대댓글) 2차 쿼리 + parent_id별 그룹핑
   const repliesRes = commentIds.length
     ? await db.from('comments')
-        .select('*,profiles(username,avatar_url),comment_likes(count)')
+        .select('*,profiles(username,avatar_url,is_admin),comment_likes(count)')
         .in('parent_id', commentIds)
         .order('created_at', { ascending: true })
     : { data: [] };
@@ -1294,6 +1300,25 @@ document.getElementById('commentList')?.addEventListener('click', async e => {
     }
     return;
   }
+
+  // 댓글 삭제 (BUG-01: 중복 리스너 제거 — 단일 리스너에 통합)
+  const delBtn = e.target.closest('.btn-del-comment');
+  if (delBtn) {
+    const id = delBtn.dataset.commentId;
+    if (!id || !confirm('댓글을 삭제하시겠습니까?')) return;
+    const { error } = await db.from('comments').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error) { alert('삭제에 실패했습니다.'); return; }
+    if (myComment?.id === id) myComment = null;
+    if (editingCommentId === id) {
+      editingCommentId = null;
+      const submitBtn = document.getElementById('commentSubmitBtn');
+      if (submitBtn) submitBtn.textContent = myComment ? '수정' : '작성';
+      const textarea = document.getElementById('commentInput');
+      if (textarea) textarea.value = '';
+    }
+    loadComments();
+    updateCommentForm();
+  }
 });
 
 // 이벤트 위임 — 반박 폼 Enter 제출
@@ -1305,25 +1330,7 @@ document.getElementById('commentList')?.addEventListener('keydown', e => {
   }
 });
 
-// 이벤트 위임 — 댓글 삭제
-document.getElementById('commentList')?.addEventListener('click', async e => {
-  const btn = e.target.closest('.btn-del-comment');
-  if (!btn) return;
-  const id = btn.dataset.commentId;
-  if (!id || !confirm('댓글을 삭제하시겠습니까?')) return;
-  const { error } = await db.from('comments').delete().eq('id', id).eq('user_id', currentUser.id);
-  if (error) { alert('삭제에 실패했습니다.'); return; }
-  if (myComment?.id === id) myComment = null;
-  if (editingCommentId === id) {
-    editingCommentId = null;
-    const submitBtn = document.getElementById('commentSubmitBtn');
-    if (submitBtn) submitBtn.textContent = myComment ? '수정' : '작성';
-    const textarea = document.getElementById('commentInput');
-    if (textarea) textarea.value = '';
-  }
-  loadComments();
-  updateCommentForm();
-});
+// 이벤트 위임 — 댓글 삭제 (BUG-01: 중복 리스너 제거 — 아래 첫 번째 리스너에 통합됨)
 
 async function toggleCommentLike(btn) {
   if (!currentUser) {
@@ -1490,6 +1497,18 @@ async function submitRebuttal(formWrap) {
   const submitBtn = formWrap.querySelector('.rebuttal-submit-btn');
   if (submitBtn) submitBtn.disabled = true;
 
+  // 크레딧 먼저 차감 — 성공 시에만 댓글 INSERT
+  const { error: creditErr } = await db.rpc('spend_credits', {
+    p_amount: REBUTTAL_COST,
+    p_reason: 'rebuttal_comment',
+    p_post_id: postId,
+  });
+  if (creditErr) {
+    alert('크레딧 차감에 실패했습니다. 잔액을 확인해주세요.');
+    if (submitBtn) submitBtn.disabled = false;
+    return;
+  }
+
   const { error: insertErr } = await db.from('comments').insert({
     user_id: currentUser.id,
     post_id: postId,
@@ -1499,17 +1518,10 @@ async function submitRebuttal(formWrap) {
   });
 
   if (insertErr) {
-    alert('반박 작성에 실패했습니다.');
+    alert('반박 작성에 실패했습니다. (크레딧은 차감되었습니다)');
     if (submitBtn) submitBtn.disabled = false;
     return;
   }
-
-  // 크레딧 차감
-  await db.rpc('spend_credits', {
-    p_amount: REBUTTAL_COST,
-    p_reason: 'rebuttal_comment',
-    p_post_id: postId,
-  });
 
   // 반박 알림 발송 (실패해도 반박 제출에는 영향 없음)
   try {
