@@ -469,24 +469,36 @@ async function loadCommunityListPage(reset = true) {
   const from = currentPage * PAGE_SIZE;
   const to   = from + PAGE_SIZE - 1;
 
+  const COMMUNITY_SELECT = 'id,title,description,thumbnail_url,view_count,created_at,user_id,is_notice,' +
+    'profiles(username,avatar_url),comments(count),likes(count)';
+
+  // 공지 먼저 별도 조회 — 페이지네이션 무관, 항상 상단 고정
+  const { data: noticeData } = await db
+    .from('posts')
+    .select(COMMUNITY_SELECT)
+    .eq('category', '커뮤니티')
+    .eq('is_notice', true)
+    .order('created_at', { ascending: false });
+
   let query = db
     .from('posts')
-    .select(
-      'id,title,description,thumbnail_url,view_count,created_at,user_id,' +
-      'profiles(username,avatar_url),comments(count),likes(count)',
-      { count: 'exact' }
-    )
+    .select(COMMUNITY_SELECT, { count: 'exact' })
     .eq('category', '커뮤니티')
+    .eq('is_notice', false)
     .order('created_at', { ascending: false })
     .range(from, to);
 
   if (communitySearchQuery.trim()) {
-    query = query.ilike('title', `%${communitySearchQuery.trim()}%`);
+    const escaped = communitySearchQuery.trim().replace(/%/g, '\\%').replace(/_/g, '\\_');
+    query = query.ilike('title', `%${escaped}%`);
   }
 
   const { data, error, count } = await query;
 
-  if (error || !data?.length) {
+  const notices = noticeData ?? [];
+  const hasContent = notices.length > 0 || (data && data.length > 0);
+
+  if (error || !hasContent) {
     const msg = communitySearchQuery.trim()
       ? `"${escapeHtml(communitySearchQuery.trim())}" 검색 결과가 없습니다.`
       : '아직 게시물이 없습니다.';
@@ -497,7 +509,10 @@ async function loadCommunityListPage(reset = true) {
   }
 
   totalCount = count ?? 0;
-  if (communityListEl) communityListEl.innerHTML = data.map(renderCommunityListItem).join('');
+  const noticeHtml = notices.length > 0
+    ? `<div class="community-notice-header">공지사항</div>` + notices.map(renderCommunityListItem).join('')
+    : '';
+  if (communityListEl) communityListEl.innerHTML = noticeHtml + (data ?? []).map(renderCommunityListItem).join('');
   renderPagination();
 }
 
@@ -572,10 +587,16 @@ function renderCommunityListItem(post) {
   const likeHtml = likeCnt > 0
     ? `<span class="cli-likes"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 17s-7-4.35-7-9a4 4 0 018 0 4 4 0 018 0c0 4.65-7 9-7 9z"/></svg>${fmtNum(likeCnt)}</span>`
     : '';
+  const noticeBadge = post.is_notice
+    ? `<span class="cli-notice-badge">공지</span>`
+    : '';
   return `
-    <a href="post.html?id=${escapeHtml(post.id)}" class="community-list-item${thumbUrl ? ' cli-has-thumb' : ''}">
+    <a href="post.html?id=${escapeHtml(post.id)}" class="community-list-item${thumbUrl ? ' cli-has-thumb' : ''}${post.is_notice ? ' cli-notice' : ''}">
       <div class="cli-body">
-        <div class="cli-title">${escapeHtml(post.title)}</div>
+        <div class="cli-title-row">
+          ${noticeBadge}
+          <div class="cli-title">${escapeHtml(post.title)}</div>
+        </div>
         ${preview ? `<div class="cli-preview">${escapeHtml(preview)}</div>` : ''}
         <div class="cli-meta">
           ${likeHtml}
