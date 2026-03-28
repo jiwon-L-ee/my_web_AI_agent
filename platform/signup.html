@@ -387,15 +387,20 @@
     btn.textContent = '처리 중...';
     try {
       await signUpWithEmail(email, password);
-      msg.textContent = '인증 이메일을 발송했습니다. 이메일을 확인하고 링크를 클릭해주세요.';
+      msg.textContent = '인증 이메일을 발송했습니다. 받은편지함을 확인해주세요. 이미 가입된 이메일이라면 로그인 페이지를 이용해주세요.';
       msg.className = 'auth-msg success';
       document.getElementById('signupForm').reset();
       checkboxes.forEach(cid => { document.getElementById(cid).checked = false; });
     } catch (err) {
-      msg.textContent = err.message || '가입에 실패했습니다. 다시 시도해주세요.';
+      const isAlreadyRegistered =
+        err.message?.includes('already registered') ||
+        err.message?.includes('already been registered') ||
+        err.message?.includes('email address is already');
+      msg.textContent = isAlreadyRegistered
+        ? '이미 가입된 이메일입니다. 로그인 페이지를 이용해주세요.'
+        : (err.message || '가입에 실패했습니다. 다시 시도해주세요.');
       msg.className = 'auth-msg error';
-    } finally {
-      btn.disabled = true;
+      btn.disabled = false;
       btn.textContent = '가입하기';
     }
   });
