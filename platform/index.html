@@ -54,7 +54,7 @@
       <a href="index.html?cat=토론" class="nav-link" data-cat="토론">토론</a>
       <a href="index.html?cat=퀴즈" class="nav-link" data-cat="퀴즈">퀴즈</a>
       <a href="index.html?cat=커뮤니티" class="nav-link" data-cat="커뮤니티">커뮤니티</a>
-      <a href="index.html?cat=정보" class="nav-link" data-cat="정보">정보</a>
+      <a href="ranking.html" class="nav-link">랭킹</a>
     </div>
     <!-- 모바일용 카테고리 셀렉트 (768px 이하에서만 표시) -->
     <select class="cat-select-mobile" id="catSelectMobile" aria-label="카테고리 선택">
@@ -62,7 +62,6 @@
       <option value="토론">토론</option>
       <option value="퀴즈">퀴즈</option>
       <option value="커뮤니티">커뮤니티</option>
-      <option value="정보">정보</option>
     </select>
     <div class="nav-auth" id="navAuth">
       <a href="login.html" class="btn-login">로그인</a>
@@ -79,7 +78,7 @@
   <div class="hero-inner">
     <div class="hero-meta-row">
       <span class="hero-badge">지금 가장 뜨거운 논쟁</span>
-      <span class="hero-hot-badge">🔥 HOT</span>
+      <span class="hero-hot-badge"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.11-3.66 5.65-2.57 8.89.12.35.08.74-.12 1.05-.19.3-.52.47-.86.45-.36-.03-.7-.24-.88-.55C6.32 12.73 6 11.39 6 10.01c0-.38-.08-.73-.31-1.02C5.45 8.67 4.95 8.36 4.5 8c-.04 3.24.88 6.13 2.82 8.02 1.3 1.28 2.97 2.19 4.85 2.47.91.13 1.85.16 2.76 0 2.19-.36 4.09-1.57 5.04-3.61.71-1.53.77-3.27.26-4.88l-.57 1.2z"/></svg> HOT</span>
     </div>
     <!-- 실제 토론 주제 (크게 표시) -->
     <h1 class="hero-topic" id="heroSubtitle">지금 가장 뜨거운 논쟁을 불러오는 중...</h1>
@@ -149,6 +148,8 @@
         </div>
         <div class="hsr-meta">
           총 <strong id="heroVoterCnt">0</strong>명 참전
+          <span class="hsr-meta-sep">·</span>
+          <span id="heroExpiryChip"></span>
         </div>
       </div>
 
@@ -168,6 +169,18 @@
   <div class="sort-bar" id="sortBar">
     <button class="sort-btn active" data-sort="view_count">인기순</button>
     <button class="sort-btn" data-sort="created_at">최신순</button>
+    <button class="sort-dir-btn" id="sortDirBtn" title="정렬 방향 전환" aria-label="정렬 방향 전환">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 2v10M4 12l-2-2M4 12l2-2"/>
+        <path d="M10 12V2M10 2l-2 2M10 2l2 2"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 토론 탭 서브탭 (진행 중 / 마감됨) -->
+  <div class="debate-sub-tabs" id="debateSubTabs" style="display:none">
+    <button class="debate-sub-tab active" data-dtab="active">진행 중</button>
+    <button class="debate-sub-tab" data-dtab="closed">마감됨</button>
   </div>
 
   <!-- 다른 뜨거운 논쟁 (밸런스게임 홈 전용) -->
@@ -177,6 +190,17 @@
     <a class="debates-see-all" href="index.html?cat=토론">전체보기 ›</a>
   </div>
   <div class="debates-bar-list" id="debatesBarList"></div>
+
+  <!-- 마감된 토론 섹션 (토론 탭 전용) -->
+  <div class="home-section-divider" id="closedDivider" style="display:none"></div>
+  <div class="home-preview-hd" id="closedHeader" style="display:none">
+    <svg class="home-preview-icon-svg" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="7" cy="7" r="6"/><path d="M7 4v3.5l2 2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="3" x2="11" y2="11" stroke-width="1.6" stroke-linecap="round" opacity="0.4"/></svg>
+    마감된 토론
+  </div>
+  <div class="debates-bar-list" id="closedDebatesList" style="display:none"></div>
+
+  <!-- 마감 임박 밸런스게임 (토론 탭 마감임박 탭 전용) -->
+  <div class="urgent-game-list" id="urgentGameList" style="display:none"></div>
 
   <!-- 퀴즈 프리뷰 (밸런스게임 홈 전용) -->
   <div class="home-section-divider" id="quizDivider" style="display:none"></div>
@@ -213,7 +237,23 @@
   <div class="card-grid" id="cardGrid">
     <div style="grid-column:1/-1"><div class="spinner-wrap"><div class="spinner"></div></div></div>
   </div>
-  <div class="community-list" id="communityList" style="display:none"></div>
+  <!-- 커뮤니티 헤더 (글쓰기 + 우측 검색) -->
+  <div id="communityWriteArea" style="display:none">
+    <div class="community-top-bar">
+      <div class="cwa-trigger" id="communityWriteTrigger">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+        새 글 쓰기
+      </div>
+      <div class="community-search-wrap" id="communitySearchWrap">
+        <input type="search" id="communitySearchInput" class="community-search-input" placeholder="제목 검색..." autocomplete="off" maxlength="50">
+        <button class="community-search-btn" id="communitySearchToggle" aria-label="검색 열기/닫기">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+<div class="community-list" id="communityList" style="display:none"></div>
 
   <div id="pagination" class="pagination"></div>
 </div>
@@ -294,8 +334,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/notifications.js"></script>
 <script src="js/vote-modal.js"></script>
-<script src="js/home.js"></script>
+<script src="js/home.js?v=3"></script>
 <script src="js/legal-modal.js"></script>
 <script>
   (function() {

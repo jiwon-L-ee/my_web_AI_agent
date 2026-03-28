@@ -21,7 +21,9 @@ async function loadProfile() {
     .single();
 
   if (error || !data) {
+    document.getElementById('profileLoading').style.display = 'none';
     document.getElementById('profileContent').innerHTML = '<p style="text-align:center;padding:60px;color:var(--text-muted)">프로필을 찾을 수 없습니다.</p>';
+    document.getElementById('profileContent').style.display = '';
     return;
   }
 
@@ -102,7 +104,7 @@ async function loadUserPosts() {
 
   const grid = document.getElementById('userPostsGrid');
   if (!data?.length) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div><p>게시물이 없습니다.</p></div>`;
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 13V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12c0 1.1.9 2 2 2h8"/><polyline points="22,15 18,19 16,17"/></svg></div><p>게시물이 없습니다.</p></div>`;
     return;
   }
 
@@ -114,7 +116,7 @@ async function loadUserPosts() {
         <div class="card-thumb-wrap">
           ${post.thumbnail_url
             ? `<img class="card-thumb" src="${escapeHtml(post.thumbnail_url)}" alt="" loading="lazy">`
-            : `<div class="card-thumb-placeholder">🧠</div>`
+            : `<div class="card-thumb-placeholder"><svg width="24" height="24" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="7" cy="9" r="3" stroke="currentColor" stroke-width="1.3" opacity="0.6"/><circle cx="15" cy="9" r="3" stroke="currentColor" stroke-width="1.3" opacity="0.6"/><circle cx="11" cy="15" r="3" stroke="currentColor" stroke-width="1.3" opacity="0.6"/><line x1="7" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1" opacity="0.4"/><line x1="7" y1="9" x2="11" y2="15" stroke="currentColor" stroke-width="1" opacity="0.4"/><line x1="15" y1="9" x2="11" y2="15" stroke="currentColor" stroke-width="1" opacity="0.4"/></svg></div>`
           }
           <span class="badge badge-${escapeHtml(post.category)}">${escapeHtml(post.category)}</span>
         </div>
@@ -123,9 +125,9 @@ async function loadUserPosts() {
           <div class="card-meta">
             <span style="font-size:0.78rem;color:var(--text-muted)">${relativeTime(post.created_at)}</span>
             <div class="card-stats">
-              <span class="card-stat">👁 ${fmtNum(post.view_count)}</span>
-              <span class="card-stat">❤️ ${fmtNum(likeCount)}</span>
-              <span class="card-stat">💬 ${fmtNum(commentCount)}</span>
+              <span class="card-stat"><svg class="ic-stat" viewBox="0 0 12 8" fill="currentColor" aria-hidden="true"><path d="M6 0C3.5 0 1 2 0 4c1 2 3.5 4 6 4s5-2 6-4C11 2 8.5 0 6 0zm0 6.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/><circle cx="6" cy="4" r="1.3"/></svg>${fmtNum(post.view_count)}</span>
+              <span class="card-stat"><svg class="ic-stat" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5C6 9.5 1 6 1 3.5A2.5 2.5 0 0 1 6 3a2.5 2.5 0 0 1 5 .5C11 6 6 9.5 6 9.5z"/></svg>${fmtNum(likeCount)}</span>
+              <span class="card-stat"><svg class="ic-stat" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><path d="M11 1H1a.5.5 0 0 0-.5.5v6c0 .28.22.5.5.5h3l2 2.5 2-2.5h3a.5.5 0 0 0 .5-.5v-6A.5.5 0 0 0 11 1z"/></svg>${fmtNum(commentCount)}</span>
             </div>
           </div>
         </div>

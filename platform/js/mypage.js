@@ -86,13 +86,13 @@ async function getMyCommentIds() {
 async function loadMyPosts() {
   const { data } = await db
     .from('posts')
-    .select('id,title,category,thumbnail_url,view_count,created_at,likes(count),comments(count)')
+    .select('id,title,category,thumbnail_url,view_count,created_at,expires_at,likes(count),comments(count)')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false });
 
   const grid = document.getElementById('myPostsGrid');
   if (!data?.length) {
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">✏️</div><p>아직 게시물이 없습니다.</p></div>`;
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><p>아직 게시물이 없습니다.</p></div>`;
     return;
   }
 
@@ -130,7 +130,9 @@ async function loadMyPosts() {
             </div>
           </div>
         </a>
-        <button class="btn-del-post" title="삭제" data-id="${post.id}">🗑️</button>
+        ${!(post.category === '밸런스게임' && post.expires_at && new Date(post.expires_at) <= new Date())
+          ? `<button class="btn-del-post" title="삭제" data-id="${post.id}">🗑️</button>`
+          : ''}
       </div>`;
   }).join('');
 }
@@ -173,11 +175,21 @@ async function saveProfile(e) {
 // ── 크레딧 잔액 & 이력 ───────────────────────────────────────────
 
 const CREDIT_REASON_LABELS = {
-  signup_bonus:   { label: '가입 보너스',  cls: 'credit-reason-bonus'   },
-  vote_win:       { label: '투표 승리',    cls: 'credit-reason-win'     },
-  creator_reward: { label: '게임 제작자',  cls: 'credit-reason-creator' },
-  post_create:    { label: '게임 생성',    cls: 'credit-reason-spend'   },
-  vote_change:    { label: '투표 변경',    cls: 'credit-reason-spend'   },
+  signup_bonus:     { label: '가입 보너스', cls: 'credit-reason-bonus',    iconCls: 'ci-bonus'    },
+  vote_win:         { label: '투표 승리',   cls: 'credit-reason-win',      iconCls: 'ci-win'      },
+  creator_reward:   { label: '게임 제작',   cls: 'credit-reason-creator',  iconCls: 'ci-creator'  },
+  post_create:      { label: '게임 생성',   cls: 'credit-reason-spend',    iconCls: 'ci-spend'    },
+  vote_change:      { label: '투표 변경',   cls: 'credit-reason-spend',    iconCls: 'ci-spend'    },
+  rebuttal_comment: { label: '반박 댓글',   cls: 'credit-reason-rebuttal', iconCls: 'ci-rebuttal' },
+};
+
+const CREDIT_ICONS = {
+  signup_bonus:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  vote_win:         `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`,
+  creator_reward:   `<svg width="15" height="20" viewBox="0 0 18 24" fill="currentColor" aria-hidden="true"><path d="M9 23C4 21 1 15 3 9C4.5 5 7 2 7 0C9 3 9 7 8 10C10 7 12 3 11 1C15 5 16 13 14 17C13 20 11 23 9 23Z"/></svg>`,
+  post_create:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  vote_change:      `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
+  rebuttal_comment: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 17 4 22 4 17"/><path d="M20 4v8a2 2 0 0 1-2 2H4"/></svg>`,
 };
 
 async function loadCredits() {
@@ -213,19 +225,27 @@ function renderCreditHistory(items) {
   }
 
   el.innerHTML = items.map(item => {
-    const meta   = CREDIT_REASON_LABELS[item.reason] ?? { label: escapeHtml(item.reason), cls: '' };
+    const meta   = CREDIT_REASON_LABELS[item.reason] ?? { label: escapeHtml(item.reason), cls: '', iconCls: 'ci-default' };
     const sign   = item.amount >= 0 ? '+' : '';
     const amtStr = sign + Math.floor(item.amount) + 'C';
     const amtCls = item.amount >= 0 ? 'credit-amount-plus' : 'credit-amount-minus';
     const postLink = item.post_id
-      ? `<a href="post.html?id=${escapeHtml(item.post_id)}" class="credit-post-link">게시물 보기</a>`
+      ? `<a href="post.html?id=${escapeHtml(item.post_id)}" class="credit-post-link">게시물 보기 →</a>`
       : '';
+    const icon = CREDIT_ICONS[item.reason] ?? CREDIT_ICONS['post_create'];
     return `
-      <div class="credit-history-item">
-        <span class="credit-reason-badge ${escapeHtml(meta.cls)}">${escapeHtml(meta.label)}</span>
-        <span class="credit-history-date">${escapeHtml(relativeTime(item.created_at))}</span>
-        ${postLink}
-        <span class="credit-amount ${escapeHtml(amtCls)}">${escapeHtml(amtStr)}</span>
+      <div class="credit-item">
+        <div class="credit-item-icon ${escapeHtml(meta.iconCls)}">${icon}</div>
+        <div class="credit-item-body">
+          <div class="credit-item-top">
+            <span class="credit-reason-badge ${escapeHtml(meta.cls)}">${escapeHtml(meta.label)}</span>
+            <span class="credit-amount ${escapeHtml(amtCls)}">${escapeHtml(amtStr)}</span>
+          </div>
+          <div class="credit-item-bottom">
+            <span class="credit-history-date">${escapeHtml(relativeTime(item.created_at))}</span>
+            ${postLink}
+          </div>
+        </div>
       </div>`;
   }).join('');
 }
@@ -271,14 +291,41 @@ function setupDeleteAccount() {
     confirmBtn.textContent = '처리 중...';
     if (msg) msg.textContent = '';
 
+    const timeoutId = setTimeout(() => {
+      if (msg) msg.textContent = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '탈퇴하기';
+    }, 30000);
+
     try {
-      // 로그아웃 처리 (Supabase 클라이언트에서 admin deleteUser 불가 → signOut으로 처리)
-      const { error } = await db.auth.signOut();
-      if (error) throw error;
+      // 현재 세션 토큰 가져오기
+      const { data: { session } } = await db.auth.getSession();
+      if (!session) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
+
+      // Edge Function 호출 → service_role로 auth.users 삭제
+      const SUPABASE_URL = 'https://mwsfzxhblboskdlffsxi.supabase.co';
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || '탈퇴 처리에 실패했습니다.');
+      }
+
+      // 로컬 세션 정리 후 이동
+      await db.auth.signOut();
       alert('탈퇴 처리가 완료되었습니다. 이용해 주셔서 감사합니다.');
       location.href = 'index.html';
     } catch (err) {
-      if (msg) msg.textContent = '처리 중 오류가 발생했습니다. 다시 시도해주세요.';
+      clearTimeout(timeoutId);
+      if (msg) msg.textContent = err.message || '처리 중 오류가 발생했습니다. 다시 시도해주세요.';
       confirmBtn.disabled = false;
       confirmBtn.textContent = '탈퇴하기';
     }

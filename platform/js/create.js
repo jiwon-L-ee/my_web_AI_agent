@@ -1,13 +1,26 @@
-// create.js — 게시물 작성 (밸런스게임 / 퀴즈 / 테스트 / 커뮤니티 / 정보)
+// create.js — 게시물 작성 (밸런스게임 / 퀴즈 / 테스트 / 커뮤니티)
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_THUMB_SIZE_MB   = 2;
 const OPTION_LABELS       = ['A', 'B', 'C', 'D'];
 
 let currentUser      = null;
-let thumbnailFile    = null;        // 밸런스게임/테스트/정보 썸네일
+let thumbnailFile    = null;        // 퀴즈/테스트 썸네일
 let currentQuizType  = 'ox';        // ox | multiple | short | subjective
 let communityImages  = [];          // 커뮤니티 드래그앤드롭 이미지 배열
+let selectedDays     = 3;           // [BALANCE:GAME_MAX_DAYS] 밸런스게임 기간 (기본 3일, 최대 7일) → docs/balance.md 참고
+
+// [BALANCE:GAME_CREATE_BASE] 기본 비용: 3일 = 20 크레딧
+// [BALANCE:GAME_CREATE_PER_DAY] 기간 추가 1일당 비용: 5 크레딧
+// ※ 변경 시 create.html #durationRow 버튼 텍스트도 함께 수정 → docs/balance.md 참고
+function calcDurationCost(days) {
+  return 20 + (days - 3) * 5;
+}
+
+// [BALANCE:QUIZ_CREATE_COST] 퀴즈 생성 비용: 20 크레딧
+// [BALANCE:TEST_CREATE_COST] 테스트 생성 비용: 20 크레딧
+const QUIZ_CREATE_COST = 20;
+const TEST_CREATE_COST = 20;
 
 // 각 문제 객체: { questionText, correctAnswer(ox), options(multiple), answers(short/subjective), imageFile? }
 let questions = [];
@@ -29,7 +42,6 @@ let questions = [];
     퀴즈:       '퀴즈 만들기',
     테스트:     '테스트 만들기',
     커뮤니티:   '커뮤니티 글 작성',
-    정보:       '정보 글 작성',
   };
 
   function toggleCategoryFields() {
@@ -38,17 +50,16 @@ let questions = [];
     const isQuiz      = cat === '퀴즈';
     const isTest      = cat === '테스트';
     const isCommunity = cat === '커뮤니티';
-    const isInfo      = cat === '정보';
-    const isSimple    = isCommunity || isInfo;
+    const isSimple    = isCommunity;
 
     if (balanceFields) balanceFields.style.display = isBalance ? '' : 'none';
     if (quizFields)    quizFields.style.display    = isQuiz    ? '' : 'none';
     if (testFields)    testFields.style.display    = isTest    ? '' : 'none';
     if (simpleFields)  simpleFields.style.display  = isSimple  ? '' : 'none';
 
-    // 커뮤니티: 이미지 첨부 / 정보: 썸네일
+    // 커뮤니티: 이미지 첨부
     if (communityImg) communityImg.style.display = isCommunity ? '' : 'none';
-    if (infoThumb)    infoThumb.style.display    = isInfo      ? '' : 'none';
+    if (infoThumb)    infoThumb.style.display    = 'none';
 
     // 테스트 URL 필수
     const modelUrlInput = document.getElementById('modelUrlInput');
@@ -65,6 +76,7 @@ let questions = [];
     tab.classList.add('active');
     categorySelect.value = tab.dataset.cat;
     toggleCategoryFields();
+    updateCreditReceipt();
     // 썸네일 파일 초기화
     thumbnailFile = null;
   });
@@ -88,27 +100,66 @@ let questions = [];
   });
 })();
 
+// ── 썸네일 드롭존 이벤트 설정 ─────────────────────────────────────
+function setupThumbZone(zoneId, inputId) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  if (!zone || !input) return;
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+}
+
 // ── init ─────────────────────────────────────────────────────────
 async function init() {
   currentUser = await requireAuth();
   if (!currentUser) return;
   initAuth();
 
-  // 썸네일 이벤트 (밸런스게임)
-  const thumbInput = document.getElementById('thumbInput');
-  if (thumbInput) {
-    thumbInput.addEventListener('change', e => handleThumbChange(e, 'thumbPreviewImg', 'thumbPreview'));
-  }
-  // 썸네일 이벤트 (테스트)
+  // 썸네일 change 이벤트
   const thumbInputTest = document.getElementById('thumbInputTest');
   if (thumbInputTest) {
     thumbInputTest.addEventListener('change', e => handleThumbChange(e, 'thumbPreviewImgTest', 'thumbPreviewTest'));
   }
-  // 썸네일 이벤트 (정보)
+  const thumbInputQuiz = document.getElementById('thumbInputQuiz');
+  if (thumbInputQuiz) {
+    thumbInputQuiz.addEventListener('change', e => handleThumbChange(e, 'thumbPreviewImgQuiz', 'thumbPreviewQuiz'));
+  }
   const thumbInputInfo = document.getElementById('thumbInputInfo');
   if (thumbInputInfo) {
     thumbInputInfo.addEventListener('change', e => handleThumbChange(e, 'thumbPreviewImgInfo', 'thumbPreviewInfo'));
   }
+
+  // 썸네일 드롭존 이벤트 (클릭/드래그앤드롭)
+  setupThumbZone('thumbZoneQuiz', 'thumbInputQuiz');
+  setupThumbZone('thumbZoneTest', 'thumbInputTest');
+
+  // 썸네일 삭제 버튼
+  document.querySelectorAll('.thumb-preview-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      thumbnailFile = null;
+      const inputEl = document.getElementById(btn.dataset.input);
+      if (inputEl) inputEl.value = '';
+      const box = btn.closest('.thumb-preview-box');
+      if (box) {
+        box.style.display = 'none';
+        const img = box.querySelector('img');
+        if (img) img.src = '';
+      }
+    });
+  });
 
   document.getElementById('createForm').addEventListener('submit', handleSubmit);
   document.getElementById('cancelBtn').addEventListener('click', () => history.back());
@@ -119,6 +170,8 @@ async function init() {
   document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
   setupQuestionListEvents();
   setupCommunityImgEvents();
+  setupDurationButtons();
+  updateCreditReceipt();
 
   // 약관 체크박스
   ['termsCheck1', 'termsCheck2'].forEach(id => {
@@ -132,6 +185,63 @@ function updateSubmitBtn() {
   const t2 = document.getElementById('termsCheck2')?.checked;
   const btn = document.getElementById('submitBtn');
   if (btn) btn.disabled = !(t1 && t2);
+}
+
+// ── 크레딧 계산서 ────────────────────────────────────────────────
+function updateCreditReceipt() {
+  const receipt   = document.getElementById('creditReceipt');
+  const rowsEl    = document.getElementById('creditReceiptRows');
+  const totalEl   = document.getElementById('creditReceiptTotal');
+  if (!receipt || !rowsEl || !totalEl) return;
+
+  const cat = document.getElementById('categorySelect')?.value;
+  let rows  = [];
+  let total = 0;
+
+  if (cat === '밸런스게임') {
+    const base  = 20;
+    const extra = (selectedDays - 3) * 5;
+    rows.push({ label: `기본 (3일)`, val: base });
+    if (extra > 0) rows.push({ label: `추가 기간 (+${selectedDays - 3}일)`, val: extra });
+    total = base + extra;
+  } else if (cat === '퀴즈') {
+    rows.push({ label: '퀴즈 생성', val: QUIZ_CREATE_COST });
+    total = QUIZ_CREATE_COST;
+  } else if (cat === '테스트') {
+    rows.push({ label: '테스트 생성', val: TEST_CREATE_COST });
+    total = TEST_CREATE_COST;
+  } else {
+    receipt.classList.remove('visible');
+    return;
+  }
+
+  rowsEl.innerHTML = rows.map(r =>
+    `<div class="credit-receipt-row">
+      <span class="row-label">${r.label}</span>
+      <span class="row-val">${r.val} 크레딧</span>
+    </div>`
+  ).join('<hr class="credit-receipt-divider">');
+  totalEl.textContent = `${total} 크레딧`;
+  receipt.classList.add('visible');
+}
+
+// ── 밸런스게임 기간 선택 ───────────────────────────────────────────
+function setupDurationButtons() {
+  const row = document.getElementById('durationRow');
+  if (!row) return;
+
+  // 기본값(3일) 활성화
+  const defaultBtn = row.querySelector('[data-days="3"]');
+  if (defaultBtn) defaultBtn.classList.add('active');
+
+  row.addEventListener('click', e => {
+    const btn = e.target.closest('.duration-btn');
+    if (!btn) return;
+    row.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedDays = parseInt(btn.dataset.days, 10);
+    updateCreditReceipt();
+  });
 }
 
 // ── 커뮤니티 이미지 ───────────────────────────────────────────────
@@ -204,7 +314,7 @@ function handleThumbChange(e, previewImgId, previewContainerId) {
     const img = document.getElementById(previewImgId);
     const box = document.getElementById(previewContainerId);
     if (img) img.src = ev.target.result;
-    if (box) box.style.display = '';
+    if (box) box.style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
@@ -256,6 +366,15 @@ function buildQuestionCardHTML(q, i) {
   const num     = `문제 ${i + 1}`;
   const content = buildQuestionContent(q, i);
   const imgUrl  = q.imageFile ? escapeHtml(URL.createObjectURL(q.imageFile)) : '';
+  const imgSection = imgUrl
+    ? `<div class="question-img-thumb">
+         <img src="${imgUrl}" alt="">
+         <button type="button" class="question-img-thumb-del" data-imgdel="${i}" aria-label="이미지 삭제">×</button>
+       </div>`
+    : `<div class="question-img-zone" data-qidx="${i}">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+         문항 이미지 추가 (선택)
+       </div>`;
   return `
     <div class="q-card" data-index="${i}">
       <div class="q-card-header">
@@ -266,11 +385,8 @@ function buildQuestionCardHTML(q, i) {
         value="${escapeHtml(q.questionText)}" data-field="questionText" data-qindex="${i}">
       ${content}
       <div class="question-img-section">
-        <div class="question-img-drop" data-qidx="${i}" style="cursor:pointer;font-size:0.82rem;color:var(--text-muted);margin-top:8px">
-          📷 문항 이미지 추가 (선택사항)
-        </div>
+        ${imgSection}
         <input type="file" class="question-img-input" accept="image/*" style="display:none" data-qidx="${i}">
-        ${imgUrl ? `<img style="max-width:120px;border-radius:6px;margin-top:6px" src="${imgUrl}" alt="">` : ''}
       </div>
     </div>`;
 }
@@ -353,9 +469,16 @@ function setupQuestionListEvents() {
       addAnswerTag(qi, input);
       return;
     }
-    const imgDrop = e.target.closest('.question-img-drop');
+    const imgDrop = e.target.closest('.question-img-zone');
     if (imgDrop) {
       list.querySelector(`.question-img-input[data-qidx="${imgDrop.dataset.qidx}"]`)?.click();
+      return;
+    }
+    const imgDel = e.target.closest('.question-img-thumb-del');
+    if (imgDel) {
+      const qi = parseInt(imgDel.dataset.imgdel, 10);
+      if (questions[qi]) questions[qi].imageFile = null;
+      renderQuestionList();
       return;
     }
   });
@@ -422,6 +545,13 @@ async function handleSubmit(e) {
   btn.disabled    = true;
   btn.textContent = '저장 중...';
 
+  // 30초 타임아웃 — 네트워크 지연으로 버튼이 무한 멈춤 방지
+  const timeoutId = setTimeout(() => {
+    btn.disabled    = false;
+    btn.textContent = '게시하기';
+    alert('요청 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요.');
+  }, 30000);
+
   try {
     const title    = document.getElementById('titleInput').value.trim();
     const category = document.getElementById('categorySelect').value;
@@ -439,26 +569,23 @@ async function handleSubmit(e) {
 
     // 퀴즈 검증
     if (category === '퀴즈') {
+      const resetBtn = () => { clearTimeout(timeoutId); btn.disabled = false; btn.textContent = '게시하기'; };
       if (!questions.length) {
         alert('문제를 최소 1개 이상 추가해주세요.');
-        btn.disabled = false; btn.textContent = '게시하기';
-        return;
+        resetBtn(); return;
       }
       for (let i = 0; i < questions.length; i++) {
         if (!questions[i].questionText.trim()) {
           alert(`문제 ${i + 1}의 문제 텍스트를 입력해주세요.`);
-          btn.disabled = false; btn.textContent = '게시하기';
-          return;
+          resetBtn(); return;
         }
         if (currentQuizType === 'multiple' && (questions[i].options ?? []).some(o => !o.trim())) {
           alert(`문제 ${i + 1}의 모든 선택지를 입력해주세요.`);
-          btn.disabled = false; btn.textContent = '게시하기';
-          return;
+          resetBtn(); return;
         }
         if (currentQuizType === 'short' && !(questions[i].answers?.length)) {
           alert(`문제 ${i + 1}의 정답을 최소 1개 추가해주세요.`);
-          btn.disabled = false; btn.textContent = '게시하기';
-          return;
+          resetBtn(); return;
         }
       }
     }
@@ -472,17 +599,17 @@ async function handleSubmit(e) {
     let thumbnailUrl = null;
     if (thumbnailFile) thumbnailUrl = await uploadThumbnail(thumbnailFile);
 
-    // 커뮤니티 이미지 업로드
+    // 커뮤니티 이미지 업로드 (병렬)
     let contentImages = [];
     if (category === '커뮤니티' && communityImages.length) {
-      for (const imgFile of communityImages) {
+      contentImages = await Promise.all(communityImages.map(async imgFile => {
         const ext  = imgFile.name.split('.').pop().toLowerCase();
         const path = `${currentUser.id}/community/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
         const { error: upErr } = await db.storage.from('thumbnails').upload(path, imgFile, { upsert: false });
         if (upErr) throw upErr;
         const { data: urlData } = db.storage.from('thumbnails').getPublicUrl(path);
-        contentImages.push(urlData.publicUrl);
-      }
+        return urlData.publicUrl;
+      }));
       if (!thumbnailUrl && contentImages.length) thumbnailUrl = contentImages[0];
     }
 
@@ -492,14 +619,29 @@ async function handleSubmit(e) {
       optionA = document.getElementById('optionAInput')?.value.trim() || null;
       optionB = document.getElementById('optionBInput')?.value.trim() || null;
 
-      // 크레딧 잔액 확인 (밸런스게임 생성 비용: 10 크레딧)
+      // 크레딧 잔액 확인 (기간별 비용: 3일=20, +1일당 +5 크레딧)
+      const requiredCredits = calcDurationCost(selectedDays);
       const { data: balData } = await db.from('credit_balances')
         .select('balance')
         .eq('user_id', currentUser.id)
         .maybeSingle();
       const balance = Number(balData?.balance ?? 0);
-      if (balance < 10) {
-        alert(`크레딧이 부족합니다. 밸런스게임 생성에 10 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
+      if (balance < requiredCredits) {
+        alert(`크레딧이 부족합니다. ${selectedDays}일 게임 생성에 ${requiredCredits} 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
+        btn.disabled = false; btn.textContent = '게시하기';
+        return;
+      }
+    }
+
+    if (category === '퀴즈' || category === '테스트') {
+      const cost = category === '퀴즈' ? QUIZ_CREATE_COST : TEST_CREATE_COST;
+      const { data: balData } = await db.from('credit_balances')
+        .select('balance')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      const balance = Number(balData?.balance ?? 0);
+      if (balance < cost) {
+        alert(`크레딧이 부족합니다. ${category} 생성에 ${cost} 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
         btn.disabled = false; btn.textContent = '게시하기';
         return;
       }
@@ -518,35 +660,41 @@ async function handleSubmit(e) {
     if (contentImages.length) postPayload.content_images = contentImages;
     if (category === '퀴즈') postPayload.quiz_type = currentQuizType;
 
-    // 밸런스게임: 만료일 + AB 랜덤 플립
+    // 밸런스게임: 만료일(선택 기간) + AB 랜덤 플립
     if (category === '밸런스게임') {
-      postPayload.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      postPayload.expires_at = new Date(Date.now() + selectedDays * 24 * 60 * 60 * 1000).toISOString();
       postPayload.ab_flipped = Math.random() > 0.5;
     }
 
     const { data, error } = await db.from('posts').insert(postPayload).select('id').single();
     if (error) throw error;
 
-    // 밸런스게임 생성 비용 차감 (-10 크레딧, RPC 사용)
-    if (category === '밸런스게임') {
-      await db.rpc('spend_credits', { p_amount: 10, p_reason: 'post_create', p_post_id: data.id });
+    // 생성 비용 차감 (RPC 사용) — 실패해도 이미 생성된 post로 이동 (중복 생성 방지)
+    try {
+      if (category === '밸런스게임') {
+        const cost = calcDurationCost(selectedDays);
+        await db.rpc('spend_credits', { p_amount: cost, p_reason: 'post_create', p_post_id: data.id });
+      } else if (category === '퀴즈') {
+        await db.rpc('spend_credits', { p_amount: QUIZ_CREATE_COST, p_reason: 'post_create', p_post_id: data.id });
+      } else if (category === '테스트') {
+        await db.rpc('spend_credits', { p_amount: TEST_CREATE_COST, p_reason: 'post_create', p_post_id: data.id });
+      }
+    } catch (creditErr) {
+      console.error('spend_credits 실패 (post 생성은 완료됨):', creditErr);
     }
 
     // 퀴즈 문항 저장
     if (category === '퀴즈' && questions.length) {
-      const questionImageUrls = [];
-      for (const q of questions) {
-        if (q.imageFile) {
-          const ext  = q.imageFile.name.split('.').pop().toLowerCase();
-          const path = `${currentUser.id}/quiz/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-          const { error: upErr } = await db.storage.from('thumbnails').upload(path, q.imageFile, { upsert: false });
-          if (upErr) throw upErr;
-          const { data: urlData } = db.storage.from('thumbnails').getPublicUrl(path);
-          questionImageUrls.push(urlData.publicUrl);
-        } else {
-          questionImageUrls.push(null);
-        }
-      }
+      // 퀴즈 문항 이미지 병렬 업로드
+      const questionImageUrls = await Promise.all(questions.map(async q => {
+        if (!q.imageFile) return null;
+        const ext  = q.imageFile.name.split('.').pop().toLowerCase();
+        const path = `${currentUser.id}/quiz/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await db.storage.from('thumbnails').upload(path, q.imageFile, { upsert: false });
+        if (upErr) throw upErr;
+        const { data: urlData } = db.storage.from('thumbnails').getPublicUrl(path);
+        return urlData.publicUrl;
+      }));
 
       const questionRows = questions.map((q, i) => {
         const row = {
@@ -572,8 +720,10 @@ async function handleSubmit(e) {
       if (qErr) throw qErr;
     }
 
+    clearTimeout(timeoutId);
     location.href = `post.html?id=${data.id}`;
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error(err);
     alert('게시물 저장에 실패했습니다. 다시 시도해주세요.');
     btn.disabled    = false;

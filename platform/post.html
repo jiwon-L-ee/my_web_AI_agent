@@ -58,8 +58,8 @@
     }
     .post-stat-icon { display: inline-flex; align-items: center; }
 
-    /* ── 삭제 버튼 (position:absolute 이탈 버그 수정) ── */
-    #deleteBtn {
+    /* ── 수정/삭제 버튼 ── */
+    #editBtn, #deleteBtn {
       position: static;
       display: inline-flex; align-items: center; gap: 5px;
       background: transparent; border: 1px solid var(--border);
@@ -67,7 +67,18 @@
       cursor: pointer; font-size: 0.82rem;
       color: var(--text-muted); transition: color 0.15s, border-color 0.15s;
     }
+    #editBtn:hover { color: var(--accent); border-color: var(--accent); }
     #deleteBtn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ── 내 투표 표시 ── */
+    .my-vote-indicator {
+      text-align: center; margin: 8px 0 4px;
+      font-size: 0.82rem; color: var(--text-muted);
+    }
+    .my-vote-indicator .mvi-label { opacity: 0.7; }
+    .my-vote-indicator .mvi-choice {
+      font-weight: 700; color: var(--accent);
+    }
 
     /* ── 본문 설명 ── */
     .post-description { font-size: 1rem; line-height: 1.85; margin: 32px 0; }
@@ -86,83 +97,134 @@
       position: relative;
       border-radius: 16px;
       overflow: hidden;
-      border: 1px solid var(--border);
+      border: none;
+      background: none;
       display: flex;
       align-items: stretch;
-      min-height: 180px;
+      min-height: 200px;
     }
-    /* vote-battle 내 불꽃 — opacity/scale은 CSS 변수로 동적 제어 */
+    /* vb-flame — 원래 hero-flame 그대로 사용 */
     .vb-flame { width: 32%; height: 100%; }
     .hero-flame-a.vb-flame { left: 2%; }
     .hero-flame-b.vb-flame { right: 2%; }
-    /* 배경 분할: --vb-pct-a 변수로 좌/우 비율 조절 */
+    /* 배경 분할: 미묘한 틴트 */
     .vote-bg-a {
       position: absolute; inset: 0 calc(100% - var(--vb-pct-a, 50%)) 0 0;
-      background: rgba(47,128,237,0.10);
+      background: rgba(47,128,237,0.07);
       transition: inset 0.9s cubic-bezier(0.34,1,0.64,1);
+      z-index: 1;
     }
     .vote-bg-b {
       position: absolute; inset: 0 0 0 var(--vb-pct-a, 50%);
-      background: rgba(245,166,35,0.10);
+      background: rgba(245,166,35,0.07);
       transition: inset 0.9s cubic-bezier(0.34,1,0.64,1);
+      z-index: 1;
     }
     .vote-side {
-      position: relative; z-index: 1;
+      position: relative; z-index: 2;
       flex: 1; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      padding: 28px 20px; gap: 12px;
+      padding: 28px 20px 36px; gap: 10px;
       text-align: center;
     }
     .vote-side-tag {
-      font-size: 0.68rem; font-weight: 700;
-      letter-spacing: 0.2em; text-transform: uppercase;
+      font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.25em; text-transform: uppercase;
+      opacity: 0.7;
     }
     .vote-tag-a { color: #71d8f7; }
     .vote-tag-b { color: #ffc947; }
     .vote-choice {
-      font-size: 1.05rem; font-weight: 700;
-      color: var(--text); line-height: 1.4;
+      font-family: 'Black Han Sans', var(--font);
+      font-size: clamp(1.1rem, 3.5vw, 1.7rem);
+      font-weight: 400;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .vote-side-a .vote-choice {
+      color: #8de0f5;
+      text-shadow:
+        0 2px 12px rgba(0,0,0,0.9),
+        0 0 28px rgba(47,128,237,0.72),
+        0 0 60px rgba(47,128,237,0.28);
+    }
+    .vote-side-b .vote-choice {
+      color: #ffc355;
+      text-shadow:
+        0 2px 12px rgba(0,0,0,0.9),
+        0 0 28px rgba(245,166,35,0.72),
+        0 0 60px rgba(195,65,8,0.28);
     }
     .vote-pct {
-      font-size: 0.82rem; color: var(--text-muted); font-weight: 600;
+      font-size: 0.8rem; color: rgba(201,209,217,0.45); font-weight: 600;
+      letter-spacing: 0.05em;
     }
+    /* VS 배지 — 카드와 동일한 원형 뱃지 */
     .vote-vs-divider {
-      position: relative; z-index: 2;
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 8px;
-      padding: 0 4px; flex-shrink: 0;
+      position: relative; z-index: 3;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; padding: 0 2px;
     }
-    .vote-vs-line { width: 1px; height: 28px; background: var(--border); }
+    .vote-vs-line { display: none; }
     .vote-vs-text {
-      font-size: 0.72rem; font-weight: 800;
-      color: var(--text-muted); letter-spacing: 0.1em;
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      background: #07090e;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      font-size: 0.65rem; font-weight: 900;
+      color: rgba(201,209,217,0.6);
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 14px rgba(233,69,96,0.2);
+      animation: vsBeat 2.4s ease-in-out infinite;
     }
+    @keyframes vsBeat {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.08); }
+    }
+    /* 상단 투표율 바 */
     .vote-bar-row {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      display: flex; height: 3px;
+      position: absolute; top: 0; left: 0; right: 0;
+      display: flex; height: 3px; z-index: 4;
     }
-    .vote-bar-a { background: var(--blue); transition: width 0.6s ease; }
-    .vote-bar-b { background: var(--orange); transition: width 0.6s ease; }
+    .vote-bar-a {
+      background: linear-gradient(90deg, #092878, #2f80ed);
+      transition: width 0.6s ease;
+    }
+    .vote-bar-b {
+      background: linear-gradient(90deg, #b05510, #f5a623);
+      transition: width 0.6s ease;
+    }
     .vote-btns {
-      display: flex; gap: 12px; margin-top: 16px;
+      display: flex; gap: 12px; margin-top: 14px;
+    }
+    .vote-caution {
+      margin-top: 10px; font-size: 0.8rem;
+      color: #ff4d4d; text-align: center;
+      border-top: 1px solid rgba(255,77,77,0.3);
+      padding-top: 8px;
     }
     .vote-btn {
-      flex: 1; padding: 12px;
-      border-radius: 10px; border: 1.5px solid var(--border);
-      background: transparent; cursor: pointer;
-      font-size: 0.9rem; font-weight: 700;
-      color: var(--text-muted);
+      flex: 1; padding: 13px;
+      border-radius: 10px; border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.03); cursor: pointer;
+      font-family: 'Black Han Sans', var(--font);
+      font-size: 1rem; font-weight: 400;
+      color: rgba(201,209,217,0.5);
       transition: all 0.18s;
+      letter-spacing: 0.02em;
     }
     .vote-btn-a:hover, .vote-btn-a.active {
-      background: rgba(47,128,237,0.12);
-      border-color: var(--blue); color: #71d8f7;
-      box-shadow: 0 0 18px rgba(47,128,237,0.2);
+      background: rgba(47,128,237,0.14);
+      border-color: rgba(47,128,237,0.5);
+      color: #8de0f5;
+      box-shadow: 0 0 20px rgba(47,128,237,0.22);
     }
     .vote-btn-b:hover, .vote-btn-b.active {
-      background: rgba(245,166,35,0.12);
-      border-color: var(--orange); color: #ffc947;
-      box-shadow: 0 0 18px rgba(245,166,35,0.2);
+      background: rgba(245,166,35,0.14);
+      border-color: rgba(245,166,35,0.5);
+      color: #ffc355;
+      box-shadow: 0 0 20px rgba(245,166,35,0.22);
     }
 
     /* ── 퀴즈 / 테스트 CTA ── */
@@ -210,9 +272,13 @@
       color: var(--text-muted); margin-bottom: 28px;
       display: flex; align-items: center; gap: 14px;
     }
-    .comments-title::after {
+    .comments-title::before {
       content: ''; flex: 1; height: 1px;
-      background: linear-gradient(90deg, var(--border), transparent);
+      background: linear-gradient(270deg, var(--border), transparent);
+    }
+    .comments-title::after {
+      content: '›'; transform: rotate(90deg); display: inline-block;
+      font-size: 1rem; color: var(--text-muted); opacity: 0.5;
     }
     .comment-list { gap: 24px; }
     .comment-item { gap: 14px; }
@@ -239,7 +305,7 @@
       <a href="index.html?cat=토론" class="nav-link" data-cat="토론">토론</a>
       <a href="index.html?cat=퀴즈" class="nav-link" data-cat="퀴즈">퀴즈</a>
       <a href="index.html?cat=커뮤니티" class="nav-link" data-cat="커뮤니티">커뮤니티</a>
-      <a href="index.html?cat=정보" class="nav-link" data-cat="정보">정보</a>
+      <a href="ranking.html" class="nav-link">랭킹</a>
     </div>
     <div class="nav-auth" id="navAuth">
       <a href="login.html" class="btn-login">로그인</a>
@@ -267,7 +333,10 @@
           <span id="authorAvatarPlaceholder" class="post-author-avatar" style="display:none;align-items:center;justify-content:center;background:var(--surface2);font-size:0.8rem;font-weight:700;"></span>
           <div>
             <div id="authorName" class="post-author-name"></div>
-            <div id="postTime" class="post-author-time"></div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div id="postTime" class="post-author-time"></div>
+              <span id="editedBadge" style="display:none;font-size:0.72rem;color:var(--text-muted);opacity:0.75">(수정됨)</span>
+            </div>
           </div>
         </a>
         <div style="display:flex;align-items:center;gap:12px">
@@ -282,12 +351,13 @@
             </span>
           </div>
           <button id="likeBtn" class="like-btn"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 17s-7-4.35-7-9a4 4 0 018 0 4 4 0 018 0c0 4.65-7 9-7 9z"/></svg> <span id="likeCount">0</span></button>
+          <button id="editBtn" style="display:none" title="수정"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14.5 2.5l3 3L6 17H3v-3L14.5 2.5z" stroke-linecap="round" stroke-linejoin="round"/></svg> 수정</button>
           <button id="deleteBtn" style="display:none" title="삭제"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M8 6V4h4v2M5 6l1 12h8l1-12" stroke-linecap="round" stroke-linejoin="round"/></svg> 삭제</button>
         </div>
       </div>
     </div>
 
-    <p id="postDescription" class="post-description" style="display:none"></p>
+    <div id="postDescription" class="post-description" style="display:none"></div>
 
     <!-- 밸런스게임 투표 섹션 -->
     <div id="voteSection" style="display:none">
@@ -336,6 +406,8 @@
         <button class="vote-btn vote-btn-a" data-choice="A">A 투표</button>
         <button class="vote-btn vote-btn-b" data-choice="B">B 투표</button>
       </div>
+      <div id="myVoteIndicator" style="display:none" class="my-vote-indicator"></div>
+      <p class="vote-caution">⚠ 댓글을 읽고 신중하게 선택하세요. 투표는 되돌리기 어렵습니다.</p>
 
       <!-- 마감 1시간 전 블라인드 배너 -->
       <div id="blindModeBanner" style="display:none" class="blind-mode-banner">
@@ -391,7 +463,7 @@
 
     <!-- Comments -->
     <div class="comments-section">
-      <div class="comments-title">댓글 <span id="commentCount2"></span></div>
+      <div class="comments-title"></div>
 
       <div id="commentFormArea">
         <!-- Filled by post.js based on auth state -->
@@ -405,6 +477,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/notifications.js"></script>
 <script>
   async function setupCommentForm() {
     const user = await getUser();
@@ -423,7 +496,7 @@
   }
   setupCommentForm();
 </script>
-<script src="js/post.js"></script>
+<script src="js/post.js?v=7"></script>
 <script src="js/legal-modal.js"></script>
 <script>
   (function() {

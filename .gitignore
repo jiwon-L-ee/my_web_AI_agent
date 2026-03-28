@@ -7,8 +7,8 @@
 .env.local
 .env*.local
 
-# Supabase 실제 키 (supabase.example.js를 복사해서 사용)
-platform/js/supabase.js
+# Supabase anon key는 공개값 — service_role만 제외 (Edge Function 환경변수로 관리)
+# platform/js/supabase.js
 
 # 개인정보 포함 법적 문서 (운영자 실명/연락처)
 platform/legal/

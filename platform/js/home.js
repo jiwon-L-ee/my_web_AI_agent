@@ -3,9 +3,12 @@
 const PAGE_SIZE = 20;
 let currentCategory = '';
 let currentSort = 'view_count';
+let currentSortAsc = false;
 let currentPage = 0;
 let totalCount = 0;
 let currentUser = null;
+let communitySearchQuery = ''; // 커뮤니티 검색어
+let _communitySearchTimer = null; // 디바운스 타이머
 
 const grid        = document.getElementById('cardGrid');
 const sortBtns    = document.querySelectorAll('.sort-btn');
@@ -22,8 +25,22 @@ const communityPreviewHeader = document.getElementById('communityPreviewHeader')
 const communityPreviewList   = document.getElementById('communityPreviewList');
 const communityDivider       = document.getElementById('communityDivider');
 const communityListEl        = document.getElementById('communityList');
+const urgentDivider          = document.getElementById('urgentDivider');
+const urgentHeader           = document.getElementById('urgentHeader');
+const urgentGameList         = document.getElementById('urgentGameList');
+const closedDivider          = document.getElementById('closedDivider');
+const closedHeader           = document.getElementById('closedHeader');
+const closedDebatesList      = document.getElementById('closedDebatesList');
+const debateSubTabs          = document.getElementById('debateSubTabs');
+const communityWriteArea     = document.getElementById('communityWriteArea');
+
+let currentDebateTab = 'active'; // 'active' | 'closed'
+let closedSort = 'expires_at';  // 마감됨 탭 정렬 기준 ('expires_at' = 최신순, 'view_count' = 인기순)
 
 async function loadPosts(reset = true) {
+  // 토론 탭이 아닌 경우 서브탭 숨김
+  if (currentCategory !== '토론' && debateSubTabs) debateSubTabs.style.display = 'none';
+
   if (currentCategory === '밸런스게임') {
     await loadBalanceGameHome();
     return;
@@ -43,6 +60,9 @@ async function loadPosts(reset = true) {
   if (heroSection)    heroSection.style.display    = 'none';
   if (debatesHeader)  debatesHeader.style.display  = 'none';
   if (debatesBarList) debatesBarList.innerHTML      = '';
+  if (urgentDivider)   urgentDivider.style.display   = 'none';
+  if (urgentHeader)    urgentHeader.style.display    = 'none';
+  if (urgentGameList)  urgentGameList.innerHTML      = '';
   if (quizDivider)          quizDivider.style.display          = 'none';
   if (quizPreviewHeader)    quizPreviewHeader.style.display    = 'none';
   if (quizPreviewList)      quizPreviewList.innerHTML          = '';
@@ -50,6 +70,7 @@ async function loadPosts(reset = true) {
   if (communityPreviewHeader) communityPreviewHeader.style.display = 'none';
   if (communityPreviewList)   communityPreviewList.innerHTML       = '';
   if (communityListEl)        communityListEl.style.display        = 'none';
+  if (communityWriteArea)     communityWriteArea.style.display     = 'none';
   if (sortBarEl)      sortBarEl.style.display       = '';
   grid.style.display = '';
 
@@ -62,11 +83,11 @@ async function loadPosts(reset = true) {
   let query = db
     .from('posts')
     .select(
-      'id,title,category,quiz_type,thumbnail_url,view_count,created_at,option_a,option_b,' +
+      'id,title,category,quiz_type,thumbnail_url,view_count,created_at,option_a,option_b,expires_at,' +
       'profiles(username,avatar_url),likes(count),comments(count),votes(count)',
       { count: 'exact' }
     )
-    .order(currentSort, { ascending: false })
+    .order(currentSort, { ascending: currentSortAsc })
     .range(from, to);
 
   if (currentCategory === '퀴즈') {
@@ -86,6 +107,7 @@ async function loadPosts(reset = true) {
   totalCount = count ?? 0;
   renderCards(data ?? []);
   renderPagination();
+  startHomeExpiryTimers();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -95,9 +117,26 @@ async function loadPosts(reset = true) {
 // ── 토론 탭: 밸런스게임 바형 리스트 전체 (히어로 없음, 페이지네이션 있음) ──
 async function loadDebateBarPage(reset = true) {
   if (reset) currentPage = 0;
+  currentDebateTab = 'active';
 
   if (heroSection)    heroSection.style.display    = 'none';
   if (debatesHeader)  debatesHeader.style.display  = 'none';
+  if (urgentDivider)   urgentDivider.style.display   = 'none';
+  if (urgentHeader)    urgentHeader.style.display    = 'none';
+  if (urgentGameList)  urgentGameList.style.display  = 'none';
+  if (closedDivider)   closedDivider.style.display   = 'none';
+  if (closedHeader)    closedHeader.style.display    = 'none';
+  if (closedDebatesList) { closedDebatesList.style.display = 'none'; closedDebatesList.innerHTML = ''; }
+  if (communityWriteArea)  communityWriteArea.style.display = 'none';
+  // 서브탭 표시 및 '진행 중' 활성화
+  if (debateSubTabs) {
+    debateSubTabs.style.display = '';
+    debateSubTabs.querySelectorAll('.debate-sub-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.dtab === 'active');
+    });
+  }
+  // 정렬 버튼 active 상태를 진행 중 기준(currentSort)으로 복원
+  sortBtns.forEach(b => b.classList.toggle('active', b.dataset.sort === currentSort));
   if (quizDivider)          quizDivider.style.display          = 'none';
   if (quizPreviewHeader)    quizPreviewHeader.style.display    = 'none';
   if (quizPreviewList)      quizPreviewList.innerHTML          = '';
@@ -105,19 +144,27 @@ async function loadDebateBarPage(reset = true) {
   if (communityPreviewHeader) communityPreviewHeader.style.display = 'none';
   if (communityPreviewList)   communityPreviewList.innerHTML       = '';
   if (communityListEl)        communityListEl.style.display        = 'none';
+  if (communityWriteArea)     communityWriteArea.style.display     = 'none';
   if (sortBarEl)      sortBarEl.style.display       = '';
   grid.style.display = 'none';
   grid.innerHTML     = '';
-  if (debatesBarList) debatesBarList.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div></div>`;
+
+  if (debatesBarList) {
+    debatesBarList.style.display = '';
+    debatesBarList.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div></div>`;
+  }
 
   const from = currentPage * PAGE_SIZE;
   const to   = from + PAGE_SIZE - 1;
+  const nowIso = new Date().toISOString();
 
+  // 진행 중인 토론만 (미만료 + expires_at 없는 게시물)
   const { data: posts, error, count } = await db
     .from('posts')
     .select('id,title,option_a,option_b,view_count,expires_at,ab_flipped,comments(count)', { count: 'exact' })
     .eq('category', '밸런스게임')
-    .order(currentSort, { ascending: false })
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+    .order(currentSort, { ascending: currentSortAsc })
     .range(from, to);
 
   if (error || !posts?.length) {
@@ -156,7 +203,7 @@ async function loadDebateBarPage(reset = true) {
     }
   });
 
-  // 로그인 유저의 투표 선택 조회
+  // 투표 선택 조회 (로그인: user_id / 게스트: guest_id + localStorage 보완)
   let myVotes = {};
   if (currentUser) {
     const { data: myVoteData } = await db
@@ -165,10 +212,187 @@ async function loadDebateBarPage(reset = true) {
       .eq('user_id', currentUser.id)
       .in('post_id', postIds);
     (myVoteData ?? []).forEach(v => { myVotes[v.post_id] = v.choice; });
+  } else {
+    const { data: myVoteData } = await db
+      .from('votes')
+      .select('post_id,choice')
+      .eq('guest_id', getGuestId())
+      .in('post_id', postIds);
+    (myVoteData ?? []).forEach(v => { myVotes[v.post_id] = v.choice; });
+    try {
+      const stored = JSON.parse(localStorage.getItem('matbul-guest-votes') || '{}');
+      postIds.forEach(id => { if (stored[id] && !myVotes[id]) myVotes[id] = stored[id]; });
+    } catch (_) {}
   }
 
   renderDebateBarList(posts, votesByPost, bestByPost, myVotes);
   renderPagination();
+  startHomeExpiryTimers();
+}
+
+// ── 마감됨 탭 진입 (서브탭 '마감됨' 클릭 시 호출) ───────────────────────────
+async function loadClosedDebatesTab() {
+  currentDebateTab = 'closed';
+  currentPage = 0;
+
+  // sortBar 표시 및 마감됨 정렬 상태로 버튼 동기화
+  if (sortBarEl) {
+    sortBarEl.style.display = '';
+    sortBtns.forEach(b => b.classList.toggle('active', b.dataset.sort === closedSort));
+  }
+  // 진행 중 리스트 숨기고 스피너 표시
+  if (debatesBarList) { debatesBarList.innerHTML = ''; debatesBarList.style.display = 'none'; }
+  if (paginationEl)   paginationEl.innerHTML = '';
+  // 서브탭 '마감됨' 활성화
+  if (debateSubTabs) {
+    debateSubTabs.querySelectorAll('.debate-sub-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.dtab === 'closed');
+    });
+  }
+  // 마감된 토론 로드
+  if (closedDebatesList) {
+    closedDebatesList.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div></div>`;
+    closedDebatesList.style.display = '';
+  }
+  await loadClosedDebates();
+}
+
+// ── 마감된 토론 목록 (토론 탭 마감됨 섹션) ──────────────────────────────────
+async function loadClosedDebates() {
+  if (!closedDebatesList) return;
+  const nowIso = new Date().toISOString();
+
+  const { data: posts } = await db
+    .from('posts')
+    .select('id,title,option_a,option_b,view_count,expires_at,ab_flipped,comments(count)')
+    .eq('category', '밸런스게임')
+    .not('expires_at', 'is', null)
+    .lt('expires_at', nowIso)
+    .order(closedSort, { ascending: currentSortAsc })
+    .limit(20);
+
+  if (!posts?.length) {
+    closedDebatesList.innerHTML = `<div class="empty" style="padding:60px 20px;text-align:center;color:var(--text-muted)">마감된 토론이 없습니다.</div>`;
+    return;
+  }
+  closedDebatesList.style.display = '';
+
+  const postIds = posts.map(p => p.id);
+  const [votesRes, resultsRes] = await Promise.all([
+    db.from('votes').select('post_id,choice').in('post_id', postIds).limit(5000),
+    db.from('post_results').select('post_id,winning_side,votes_a,votes_b,credits_paid').in('post_id', postIds),
+  ]);
+
+  const votesByPost = {};
+  (votesRes.data ?? []).forEach(v => {
+    if (v.choice !== 'A' && v.choice !== 'B') return;
+    if (!votesByPost[v.post_id]) votesByPost[v.post_id] = { A: 0, B: 0 };
+    votesByPost[v.post_id][v.choice]++;
+  });
+
+  const resultByPost = {};
+  (resultsRes.data ?? []).forEach(r => { resultByPost[r.post_id] = r; });
+
+  closedDebatesList.innerHTML = posts.map(post => {
+    const votes   = votesByPost[post.id] || { A: 0, B: 0 };
+    const result  = resultByPost[post.id];
+    const total   = votes.A + votes.B;
+    const pctA    = total > 0 ? Math.round(votes.A / total * 100) : 50;
+    const pctB    = 100 - pctA;
+    const cmtCnt  = post.comments?.[0]?.count ?? 0;
+    const viewCnt = post.view_count ?? 0;
+    const optA    = escapeHtml(post.option_a || 'A');
+    const optB    = escapeHtml(post.option_b || 'B');
+
+    let winnerHtml = '';
+    if (result?.winning_side === 'A') {
+      winnerHtml = `<span class="closed-winner closed-winner-a">A 승 (${optA})</span>`;
+    } else if (result?.winning_side === 'B') {
+      winnerHtml = `<span class="closed-winner closed-winner-b">B 승 (${optB})</span>`;
+    } else if (result) {
+      winnerHtml = `<span class="closed-winner closed-winner-tie">동률</span>`;
+    }
+
+    return `
+      <a href="post.html?id=${escapeHtml(post.id)}" class="dbi-item closed-dbi-item">
+        <div class="dbi-inner">
+          <div class="dbi-title-row">
+            <span class="dbi-title">${escapeHtml(post.title)}</span>
+            ${winnerHtml}
+          </div>
+          <div class="dbi-options">
+            <span class="dbi-opt dbi-opt-a">${optA}</span>
+            <span class="dbi-opt-sep">vs</span>
+            <span class="dbi-opt dbi-opt-b">${optB}</span>
+          </div>
+          <div class="dbi-bar-wrap">
+            <div class="dbi-bar-a" style="width:${pctA}%;opacity:0.6"></div>
+            <div class="dbi-bar-b" style="width:${pctB}%;opacity:0.6"></div>
+          </div>
+          <div class="dbi-pcts">
+            <span class="dbi-pct-a">${pctA}%</span>
+            <span class="dbi-pct-sep">vs</span>
+            <span class="dbi-pct-b">${pctB}%</span>
+          </div>
+          <div class="dbi-stats-row">
+            <span class="dbi-stat">
+              <svg width="12" height="12" viewBox="0 0 12 8" fill="currentColor" aria-hidden="true"><path d="M6 0C3.5 0 1 2 0 4c1 2 3.5 4 6 4s5-2 6-4C11 2 8.5 0 6 0zm0 6.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/><circle cx="6" cy="4" r="1.3"/></svg>
+              ${fmtNum(viewCnt)}
+            </span>
+            <span class="dbi-stat">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="4.5" cy="3.5" r="2"/><path d="M0 10c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><circle cx="9" cy="3" r="1.5"/><path d="M9 7c1.5 0 3 1 3 3" stroke-linecap="round"/></svg>
+              ${fmtNum(total)}
+            </span>
+            <span class="dbi-stat">
+              <svg width="12" height="12" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><path d="M11 1H1a.5.5 0 0 0-.5.5v6c0 .28.22.5.5.5h3l2 2.5 2-2.5h3a.5.5 0 0 0 .5-.5v-6A.5.5 0 0 0 11 1z"/></svg>
+              ${fmtNum(cmtCnt)}
+            </span>
+            <span class="dbi-stat" style="opacity:0.5">마감</span>
+          </div>
+        </div>
+        <span class="dbi-arrow" aria-hidden="true">›</span>
+      </a>`;
+  }).join('');
+}
+
+// ── 마감 임박 밸런스게임 (토론 탭 마감임박 탭 전용) ────────────────────────────
+async function loadUrgentBalanceGames() {
+  if (!urgentGameList) return;
+  const nowIso   = new Date().toISOString();
+  const in24hIso = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+  urgentGameList.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div></div>`;
+  urgentGameList.style.display = '';
+
+  const { data: posts } = await db
+    .from('posts')
+    .select('id,title,option_a,option_b,expires_at')
+    .eq('category', '밸런스게임')
+    .gt('expires_at', nowIso)
+    .lt('expires_at', in24hIso)
+    .order('expires_at', { ascending: true })
+    .limit(50);
+
+  if (!posts?.length) {
+    urgentGameList.innerHTML = `<div class="empty" style="padding:60px 20px"><p>마감 임박 논쟁이 없습니다.</p></div>`;
+    return;
+  }
+
+  urgentGameList.innerHTML = posts.map(post => `
+    <div class="urgent-game-item" data-id="${post.id}" role="button" tabindex="0"
+         aria-label="${escapeHtml(post.title)} — 마감 임박">
+      <div class="ugi-timer">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="6" cy="6" r="5"/><path d="M6 3.5v2.8l1.8 1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-expires="${escapeHtml(post.expires_at)}"></span>
+      </div>
+      <div class="ugi-title">${escapeHtml(post.title)}</div>
+      <div class="ugi-options">
+        <span class="ugi-opt-a">${escapeHtml(post.option_a || 'A')}</span>
+        <span class="ugi-vs">vs</span>
+        <span class="ugi-opt-b">${escapeHtml(post.option_b || 'B')}</span>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ── 퀴즈 프리뷰 (홈 전용) ──────────────────────────────────
@@ -193,7 +417,7 @@ async function loadQuizPreview() {
 async function loadCommunityPreview() {
   const { data } = await db
     .from('posts')
-    .select('id,title,description,view_count,created_at,user_id,profiles(username,avatar_url),comments(count)')
+    .select('id,title,description,thumbnail_url,view_count,created_at,user_id,profiles(username,avatar_url),comments(count),likes(count)')
     .eq('category', '커뮤니티')
     .order('created_at', { ascending: false })
     .limit(4);
@@ -212,38 +436,61 @@ async function loadCommunityListPage(reset = true) {
   if (heroSection)    heroSection.style.display    = 'none';
   if (debatesHeader)  debatesHeader.style.display  = 'none';
   if (debatesBarList) debatesBarList.innerHTML      = '';
+  if (urgentDivider)   urgentDivider.style.display   = 'none';
+  if (urgentHeader)    urgentHeader.style.display    = 'none';
+  if (urgentGameList)  urgentGameList.innerHTML      = '';
+  if (closedDivider)   closedDivider.style.display   = 'none';
+  if (closedHeader)    closedHeader.style.display    = 'none';
+  if (closedDebatesList) { closedDebatesList.style.display = 'none'; closedDebatesList.innerHTML = ''; }
   if (quizDivider)          quizDivider.style.display          = 'none';
   if (quizPreviewHeader)    quizPreviewHeader.style.display    = 'none';
   if (quizPreviewList)      quizPreviewList.innerHTML          = '';
   if (communityDivider)     communityDivider.style.display     = 'none';
   if (communityPreviewHeader) communityPreviewHeader.style.display = 'none';
   if (communityPreviewList)   communityPreviewList.innerHTML       = '';
-  if (sortBarEl)      sortBarEl.style.display = '';
+  if (sortBarEl)      sortBarEl.style.display = 'none';
   grid.style.display  = 'none';
   grid.innerHTML      = '';
+
+  // 글쓰기 영역 표시 및 이벤트 초기화
+  if (communityWriteArea) {
+    communityWriteArea.style.display = '';
+    setupCommunityWriteForm();
+    _setupCommunitySearch();
+  }
 
   if (communityListEl) {
     communityListEl.style.display = '';
     communityListEl.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div></div>`;
   }
 
+
   if (reset) currentPage = 0;
   const from = currentPage * PAGE_SIZE;
   const to   = from + PAGE_SIZE - 1;
 
-  const { data, error, count } = await db
+  let query = db
     .from('posts')
     .select(
-      'id,title,description,view_count,created_at,user_id,' +
-      'profiles(username,avatar_url),comments(count)',
+      'id,title,description,thumbnail_url,view_count,created_at,user_id,' +
+      'profiles(username,avatar_url),comments(count),likes(count)',
       { count: 'exact' }
     )
     .eq('category', '커뮤니티')
-    .order(currentSort, { ascending: false })
+    .order('created_at', { ascending: false })
     .range(from, to);
 
+  if (communitySearchQuery.trim()) {
+    query = query.ilike('title', `%${communitySearchQuery.trim()}%`);
+  }
+
+  const { data, error, count } = await query;
+
   if (error || !data?.length) {
-    if (communityListEl) communityListEl.innerHTML = `<div class="empty" style="padding:60px 20px;text-align:center;color:var(--text-muted)">아직 게시물이 없습니다.</div>`;
+    const msg = communitySearchQuery.trim()
+      ? `"${escapeHtml(communitySearchQuery.trim())}" 검색 결과가 없습니다.`
+      : '아직 게시물이 없습니다.';
+    if (communityListEl) communityListEl.innerHTML = `<div class="empty" style="padding:60px 20px;text-align:center;color:var(--text-muted)">${msg}</div>`;
     totalCount = 0;
     renderPagination();
     return;
@@ -254,25 +501,110 @@ async function loadCommunityListPage(reset = true) {
   renderPagination();
 }
 
+// ── 커뮤니티 검색 이벤트 (한 번만 등록) ──────────────────────
+let _communitySearchSetup = false;
+function _setupCommunitySearch() {
+  if (_communitySearchSetup) return;
+  _communitySearchSetup = true;
+
+  const input  = document.getElementById('communitySearchInput');
+  const toggle = document.getElementById('communitySearchToggle');
+  const wrap   = document.getElementById('communitySearchWrap');
+  if (!input || !toggle || !wrap) return;
+
+  input.value = communitySearchQuery;
+  if (communitySearchQuery) wrap.classList.add('open');
+
+  function _close() {
+    input.value = '';
+    if (communitySearchQuery) {
+      communitySearchQuery = '';
+      loadCommunityListPage(true);
+    }
+    wrap.classList.remove('open');
+  }
+
+  toggle.addEventListener('click', () => {
+    const isOpen = wrap.classList.toggle('open');
+    if (isOpen) {
+      input.focus();
+    } else {
+      _close();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (currentCategory !== '커뮤니티') return;
+    if (!wrap.contains(e.target) && !input.value) {
+      wrap.classList.remove('open');
+    }
+  });
+
+  input.addEventListener('input', () => {
+    clearTimeout(_communitySearchTimer);
+    _communitySearchTimer = setTimeout(() => {
+      if (currentCategory !== '커뮤니티') return;
+      communitySearchQuery = input.value;
+      loadCommunityListPage(true);
+    }, 300);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      _close();
+      input.blur();
+    }
+  });
+}
+
 function renderCommunityListItem(post) {
-  const cmtCnt  = post.comments?.[0]?.count ?? 0;
-  const author  = post.profiles;
-  const name    = author?.username ?? '익명';
-  const preview = (post.description ?? '').replace(/\n+/g, ' ').trim().slice(0, 100);
-  const time    = relativeTime(post.created_at);
+  const cmtCnt   = post.comments?.[0]?.count ?? 0;
+  const likeCnt  = post.likes?.[0]?.count ?? 0;
+  const author   = post.profiles;
+  const name     = author?.username ?? '익명';
+  // [img:N] 플레이스홀더 제거 후 미리보기 텍스트 생성
+  const preview  = (post.description ?? '').replace(/\[img:\d+\]/g, '').replace(/\n+/g, ' ').trim().slice(0, 100);
+  const time     = relativeTime(post.created_at);
+  const thumbUrl = post.thumbnail_url;
   const cmtHtml = cmtCnt > 0
     ? `<span class="cli-comments"><svg width="11" height="11" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><path d="M11 1H1a.5.5 0 0 0-.5.5v6c0 .28.22.5.5.5h3l2 2.5 2-2.5h3a.5.5 0 0 0 .5-.5v-6A.5.5 0 0 0 11 1z"/></svg>${fmtNum(cmtCnt)}</span>`
     : '';
+  const likeHtml = likeCnt > 0
+    ? `<span class="cli-likes"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 17s-7-4.35-7-9a4 4 0 018 0 4 4 0 018 0c0 4.65-7 9-7 9z"/></svg>${fmtNum(likeCnt)}</span>`
+    : '';
   return `
-    <a href="post.html?id=${escapeHtml(post.id)}" class="community-list-item">
-      <div class="cli-title">${escapeHtml(post.title)}</div>
-      ${preview ? `<div class="cli-preview">${escapeHtml(preview)}</div>` : ''}
-      <div class="cli-meta">
-        ${cmtHtml}
-        <span class="cli-time">${escapeHtml(time)}</span>
-        <span class="cli-author">${escapeHtml(name)}</span>
+    <a href="post.html?id=${escapeHtml(post.id)}" class="community-list-item${thumbUrl ? ' cli-has-thumb' : ''}">
+      <div class="cli-body">
+        <div class="cli-title">${escapeHtml(post.title)}</div>
+        ${preview ? `<div class="cli-preview">${escapeHtml(preview)}</div>` : ''}
+        <div class="cli-meta">
+          ${likeHtml}
+          ${cmtHtml}
+          <span class="cli-time">${escapeHtml(time)}</span>
+          <span class="cli-author">${escapeHtml(name)}</span>
+        </div>
       </div>
+      ${thumbUrl ? `<div class="cli-thumb"><img src="${escapeHtml(thumbUrl)}" alt="" loading="lazy"></div>` : ''}
     </a>`;
+}
+
+// ── 커뮤니티 인라인 글쓰기 ─────────────────────────────────────────────────
+let _cwaEventsBound = false;
+
+function setupCommunityWriteForm() {
+  if (_cwaEventsBound) return;
+  _cwaEventsBound = true;
+
+  const trigger = document.getElementById('communityWriteTrigger');
+  if (!trigger) return;
+
+  trigger.addEventListener('click', () => {
+    if (!currentUser) {
+      location.href = `login.html?next=${encodeURIComponent('community-create.html')}`;
+      return;
+    }
+    location.href = 'community-create.html';
+  });
 }
 
 const PREVIEW_ICONS = {
@@ -338,6 +670,12 @@ async function loadBalanceGameHome() {
   if (sortBarEl)      sortBarEl.style.display      = 'none';
   if (debatesHeader)  debatesHeader.style.display   = 'none';
   if (debatesBarList) debatesBarList.innerHTML       = '';
+  if (urgentDivider)   urgentDivider.style.display   = 'none';
+  if (urgentHeader)    urgentHeader.style.display    = 'none';
+  if (urgentGameList) { urgentGameList.style.display = 'none'; urgentGameList.innerHTML = ''; }
+  if (closedDivider)   closedDivider.style.display   = 'none';
+  if (closedHeader)    closedHeader.style.display    = 'none';
+  if (closedDebatesList) { closedDebatesList.style.display = 'none'; closedDebatesList.innerHTML = ''; }
   if (quizDivider)          quizDivider.style.display          = 'none';
   if (quizPreviewHeader)    quizPreviewHeader.style.display    = 'none';
   if (quizPreviewList)      quizPreviewList.innerHTML          = '';
@@ -345,8 +683,10 @@ async function loadBalanceGameHome() {
   if (communityPreviewHeader) communityPreviewHeader.style.display = 'none';
   if (communityPreviewList)   communityPreviewList.innerHTML       = '';
   if (communityListEl)        communityListEl.style.display        = 'none';
+  if (communityWriteArea)     communityWriteArea.style.display     = 'none';
   grid.style.display = 'none';
   grid.innerHTML     = '';
+  if (paginationEl) paginationEl.innerHTML = '';
 
   const heroStatsRow = document.getElementById('heroStatsRow');
   if (heroStatsRow) heroStatsRow.style.display = 'none';
@@ -354,6 +694,7 @@ async function loadBalanceGameHome() {
   // 히어로 영역 로딩 표시
   if (heroSection) heroSection.style.display = '';
 
+  const homeNowIso = new Date().toISOString();
   const { data: posts, error } = await db
     .from('posts')
     .select(
@@ -361,8 +702,9 @@ async function loadBalanceGameHome() {
       'view_count,expires_at,ab_flipped,profiles(username),comments(count),votes(count)'
     )
     .eq('category', '밸런스게임')
+    .or(`expires_at.is.null,expires_at.gt.${homeNowIso}`)
     .order('view_count', { ascending: false })
-    .limit(6);
+    .limit(20);  // 후보군을 넓게 확보 후 hot 스코어로 재정렬
 
   if (error || !posts?.length) {
     if (heroSection) {
@@ -372,15 +714,17 @@ async function loadBalanceGameHome() {
   }
 
   const postIds = posts.map(p => p.id);
+  const oneHourAgoIso = new Date(Date.now() - 3600 * 1000).toISOString();
 
-  // 투표 + 베스트 댓글 병렬 로드
-  const [votesRes, commentsRes] = await Promise.all([
+  // 투표 + 베스트 댓글 + 최근 1시간 투표 병렬 로드
+  const [votesRes, commentsRes, recentVotesRes] = await Promise.all([
     db.from('votes').select('post_id,choice').in('post_id', postIds).limit(5000),
     db.from('comments')
       .select('post_id,content,side,comment_likes(count)')
       .in('post_id', postIds)
       .not('side', 'is', null)
       .limit(500),
+    db.from('votes').select('post_id').in('post_id', postIds).gt('created_at', oneHourAgoIso),
   ]);
 
   // 포스트별 A/B 투표 집계
@@ -402,25 +746,47 @@ async function loadBalanceGameHome() {
     }
   });
 
-  // 총 투표수 기준 정렬 (핫한 순)
-  posts.sort((a, b) => {
-    const va = votesByPost[a.id] || { A: 0, B: 0 };
-    const vb = votesByPost[b.id] || { A: 0, B: 0 };
-    return (vb.A + vb.B) - (va.A + va.B);
+  // 최근 1시간 투표수 집계
+  const recentVoteCount = {};
+  (recentVotesRes.data ?? []).forEach(v => {
+    recentVoteCount[v.post_id] = (recentVoteCount[v.post_id] || 0) + 1;
   });
 
-  // 로그인 유저의 투표 선택 조회
+  // Hot 정렬: 최근 1시간 투표수 우선 → 총 조회수 보조
+  posts.sort((a, b) => {
+    const ra = recentVoteCount[a.id] || 0;
+    const rb = recentVoteCount[b.id] || 0;
+    if (rb !== ra) return rb - ra;
+    return (b.view_count || 0) - (a.view_count || 0);
+  });
+
+  // Hot 상위 6개만 표시
+  const hotPosts = posts.slice(0, 6);
+  const hotPostIds = hotPosts.map(p => p.id);
+
+  // 투표 선택 조회 (로그인: user_id / 게스트: guest_id + localStorage 보완)
   let myVotesHome = {};
   if (currentUser) {
     const { data: myVoteData } = await db
       .from('votes')
       .select('post_id,choice')
       .eq('user_id', currentUser.id)
-      .in('post_id', postIds);
+      .in('post_id', hotPostIds);
     (myVoteData ?? []).forEach(v => { myVotesHome[v.post_id] = v.choice; });
+  } else {
+    const { data: myVoteData } = await db
+      .from('votes')
+      .select('post_id,choice')
+      .eq('guest_id', getGuestId())
+      .in('post_id', hotPostIds);
+    (myVoteData ?? []).forEach(v => { myVotesHome[v.post_id] = v.choice; });
+    try {
+      const stored = JSON.parse(localStorage.getItem('matbul-guest-votes') || '{}');
+      hotPostIds.forEach(id => { if (stored[id] && !myVotesHome[id]) myVotesHome[id] = stored[id]; });
+    } catch (_) {}
   }
 
-  const [topPost, ...restPosts] = posts;
+  const [topPost, ...restPosts] = hotPosts;
   renderHero(topPost, votesByPost[topPost.id] || { A: 0, B: 0 }, bestByPost[topPost.id] || {});
 
   if (restPosts.length) {
@@ -430,12 +796,14 @@ async function loadBalanceGameHome() {
 
   // 퀴즈 · 커뮤니티 프리뷰 병렬 로드
   await Promise.all([loadQuizPreview(), loadCommunityPreview()]);
+  startHomeExpiryTimers();
 }
 
 function renderHero(post, votes, best) {
   const total = votes.A + votes.B;
   const pctA  = total > 0 ? +(votes.A / total * 100).toFixed(1) : 50;
   const pctB  = +(100 - pctA).toFixed(1);
+  const blind = isPostBlind(post);
 
   // 데이터 채우기 (textContent → XSS 안전)
   const heroSubtitleEl = document.getElementById('heroSubtitle');
@@ -445,13 +813,13 @@ function renderHero(post, votes, best) {
 
   if (q('heroOptA')) q('heroOptA').textContent = post.option_a || 'A';
   if (q('heroOptB')) q('heroOptB').textContent = post.option_b || 'B';
-  if (q('heroPctA')) q('heroPctA').textContent = pctA + '%';
-  if (q('heroPctB')) q('heroPctB').textContent = pctB + '%';
+  if (q('heroPctA')) q('heroPctA').textContent = blind ? '??' : pctA + '%';
+  if (q('heroPctB')) q('heroPctB').textContent = blind ? '??' : pctB + '%';
   if (q('heroVoterCnt')) q('heroVoterCnt').textContent = fmtNum(total);
 
   // 하단 stats 패널
-  if (q('hsrPctA')) q('hsrPctA').textContent = '찬성 ' + pctA + '%';
-  if (q('hsrPctB')) q('hsrPctB').textContent = '반대 ' + pctB + '%';
+  if (q('hsrPctA')) q('hsrPctA').textContent = blind ? '찬성 ??' : '찬성 ' + pctA + '%';
+  if (q('hsrPctB')) q('hsrPctB').textContent = blind ? '반대 ??' : '반대 ' + pctB + '%';
 
   const bestAContent = best.A?.content || '';
   const bestBContent = best.B?.content || '';
@@ -460,18 +828,30 @@ function renderHero(post, votes, best) {
   if (q('heroBestALikes') && best.A) q('heroBestALikes').textContent = '좋아요 ' + fmtNum(best.A.likes);
   if (q('heroBestBLikes') && best.B) q('heroBestBLikes').textContent = '좋아요 ' + fmtNum(best.B.likes);
 
+  // 히어로 타이머 chip
+  const heroChip = document.getElementById('heroExpiryChip');
+  if (heroChip && post.expires_at) {
+    heroChip.dataset.expires = post.expires_at;
+  } else if (heroChip) {
+    heroChip.removeAttribute('data-expires');
+    heroChip.textContent = '';
+    heroChip.className = '';
+  }
+
   // 히어로 배틀 데이터
   if (heroBattle) heroBattle.dataset.id = post.id;
 
-  // ── 배경 분할 (배경색만, 패널 레이아웃은 고정) ──
+  // ── 배경 분할 (블라인드 모드: 50/50 고정) ──
   if (heroBattle) {
+    const vbA = blind ? 50 : pctA;
+    const vbB = blind ? 50 : pctB;
     if (total > 0) {
-      heroBattle.style.setProperty('--divide', pctA + '%');
-      heroBattle.style.setProperty('--pct-a', pctA);
-      heroBattle.style.setProperty('--pct-b', pctB);
+      heroBattle.style.setProperty('--divide', vbA + '%');
+      heroBattle.style.setProperty('--pct-a', vbA);
+      heroBattle.style.setProperty('--pct-b', vbB);
     }
 
-    // ── 불꽃 세기: 투표율에 따라 opacity / 채도 / 밝기 / 높이 조절 ──
+    // ── 불꽃 세기: 블라인드 시 균등, 일반 시 투표율 반영 ──
     const applyFlame = (side, pct) => {
       const opacity = (0.25 + (pct / 100) * 0.75).toFixed(2);
       const sat     = Math.round(60 + pct * 1.4) + '%';
@@ -486,8 +866,8 @@ function renderHero(post, votes, best) {
     if (total > 0) {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          applyFlame('a', pctA);
-          applyFlame('b', pctB);
+          applyFlame('a', vbA);
+          applyFlame('b', vbB);
         });
       });
     }
@@ -504,6 +884,70 @@ function isPostBlind(post) {
   return msLeft > 0 && msLeft < 60 * 60 * 1000;
 }
 
+// ── 날짜 파싱: Supabase 타임스탬프 → ms ──────────────────────────
+// Supabase: "YYYY-MM-DD HH:MM:SS.ssssss+00" → ISO 8601 변환
+function parseDateMs(str) {
+  if (!str) return NaN;
+  // "2026-03-29 06:16:01.738059+00" → "2026-03-29T06:16:01.738+00:00"
+  const iso = str.replace(' ', 'T').replace(/(\.\d{3})\d*/, '$1').replace(/([+-]\d{2})$/, '$1:00');
+  const ms = Date.parse(iso);
+  if (!isNaN(ms)) return ms;
+  // 폴백: 원본 문자열 그대로 시도
+  return Date.parse(str);
+}
+
+// ── 홈 타이머 (1분 간격, 1시간 미만 진입 시 1초로 전환) ──────────
+let _homeTimerId = null;
+function startHomeExpiryTimers() {
+  if (_homeTimerId) { clearInterval(_homeTimerId); _homeTimerId = null; }
+
+  function tick() {
+    let anyUrgent = false;
+    document.querySelectorAll('[data-expires]').forEach(el => {
+      const expiresMs = parseDateMs(el.dataset.expires);
+      const msLeft = expiresMs - Date.now();
+      let text, colorCls;
+      if (isNaN(msLeft) || msLeft <= 0) {
+        text = '종료'; colorCls = 'tl-ended';
+      } else if (msLeft < 60 * 60 * 1000) {
+        const m = Math.floor(msLeft / 60_000);
+        const s = Math.floor((msLeft % 60_000) / 1000);
+        text = `${m}분 ${String(s).padStart(2, '0')}초`;
+        colorCls = 'tl-urgent';
+        anyUrgent = true;
+      } else if (msLeft < 24 * 60 * 60 * 1000) {
+        const h = Math.floor(msLeft / 3_600_000);
+        const m = Math.floor((msLeft % 3_600_000) / 60_000);
+        text = `${h}시간 ${m}분`;
+        colorCls = 'tl-urgent';
+        anyUrgent = true;
+      } else {
+        const d = Math.ceil(msLeft / (24 * 3_600_000));
+        text = `D-${d}`;
+        colorCls = 'tl-active';
+      }
+      el.textContent = text;
+      el.classList.remove('tl-active', 'tl-today', 'tl-urgent', 'tl-ended');
+      // #heroExpiryChip은 ID CSS로 처리 (time-left-chip 클래스 불필요)
+      if (el.id !== 'heroExpiryChip') {
+        el.classList.add('time-left-chip', colorCls);
+      } else {
+        el.classList.add(colorCls);
+      }
+    });
+    return anyUrgent;
+  }
+
+  const urgent = tick(); // 즉시 1회 실행
+  _homeTimerId = setInterval(() => {
+    const hasUrgent = tick();
+    if (hasUrgent) {
+      clearInterval(_homeTimerId);
+      _homeTimerId = setInterval(tick, 1_000);
+    }
+  }, urgent ? 1_000 : 60_000);
+}
+
 function renderDebateBarList(posts, votesByPost, bestByPost, myVotes = {}) {
   if (!debatesBarList) return;
   debatesBarList.innerHTML = posts.map(post => {
@@ -517,8 +961,8 @@ function renderDebateBarList(posts, votesByPost, bestByPost, myVotes = {}) {
     const bestA   = best.A?.content || '';
     const bestB   = best.B?.content || '';
     const myChoice = myVotes[post.id];
-    const myVoteBadge = myChoice
-      ? `<span class="my-vote-badge my-vote-badge-${myChoice.toLowerCase()}">${escapeHtml(myChoice === 'A' ? post.option_a || 'A' : post.option_b || 'B')} 선택</span>`
+    const myVoteTag = myChoice
+      ? `<span class="dbi-my-choice dbi-my-choice-${myChoice.toLowerCase()}">✓ ${escapeHtml(myChoice === 'A' ? post.option_a || 'A' : post.option_b || 'B')}</span>`
       : '';
 
     const blind = isPostBlind(post);
@@ -526,18 +970,27 @@ function renderDebateBarList(posts, votesByPost, bestByPost, myVotes = {}) {
     const barBStyle = blind ? 'width:50%' : `width:${pctB}%`;
     const pctAText  = blind ? '??%' : `${pctA}%`;
     const pctBText  = blind ? '??%' : `${pctB}%`;
-    const blindBadge = blind ? `<span class="dbi-blind-badge">⏳ 마감 1시간 전</span>` : '';
+    const blindBadge = blind ? `<span class="dbi-blind-badge">블라인드</span>` : '';
+    const timeStatHtml = post.expires_at
+      ? `<span class="dbi-stat dbi-stat-time">
+           <span data-expires="${escapeHtml(post.expires_at)}"></span>
+         </span>`
+      : '';
 
     return `
-      <div class="debate-bar-item" data-id="${post.id}" role="button" tabindex="0"
+      <div class="debate-bar-item${myChoice ? ' voted-' + myChoice.toLowerCase() : ''}" data-id="${post.id}" role="button" tabindex="0"
            aria-label="${escapeHtml(post.title)} 투표하기">
+        ${myChoice ? `<div class="dbi-voted-stamp dbi-voted-stamp-${myChoice.toLowerCase()}">✓</div>` : ''}
         <div class="dbi-body">
+          <div class="dbi-title-row">
+            <div class="dbi-title">${escapeHtml(post.title)}${blindBadge}</div>
+            ${myVoteTag}
+          </div>
           <div class="dbi-top-row">
             <span class="dbi-opt-a">${escapeHtml(post.option_a || 'A')}</span>
             <span class="dbi-vs-badge">vs</span>
             <span class="dbi-opt-b">${escapeHtml(post.option_b || 'B')}</span>
           </div>
-          <div class="dbi-title">${escapeHtml(post.title)}${myVoteBadge}${blindBadge}</div>
           <div class="dbi-bar-wrap">
             <div class="dbi-bar-a" style="${barAStyle}"></div>
             <div class="dbi-bar-b" style="${barBStyle}"></div>
@@ -549,8 +1002,8 @@ function renderDebateBarList(posts, votesByPost, bestByPost, myVotes = {}) {
           </div>
           ${bestA || bestB ? `
           <div class="dbi-best-row">
-            ${bestA ? `<div class="dbi-best dbi-best-a">"${escapeHtml(bestA)}"</div>` : '<div></div>'}
-            ${bestB ? `<div class="dbi-best dbi-best-b">"${escapeHtml(bestB)}"</div>` : '<div></div>'}
+            ${bestA ? `<div class="dbi-best dbi-best-a"><span class="dbi-best-icon">A</span><span class="dbi-best-text">${escapeHtml(bestA)}</span></div>` : '<div></div>'}
+            ${bestB ? `<div class="dbi-best dbi-best-b"><span class="dbi-best-icon">B</span><span class="dbi-best-text">${escapeHtml(bestB)}</span></div>` : '<div></div>'}
           </div>` : ''}
           <div class="dbi-stats-row">
             <span class="dbi-stat">
@@ -565,6 +1018,7 @@ function renderDebateBarList(posts, votesByPost, bestByPost, myVotes = {}) {
               <svg width="12" height="12" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><path d="M11 1H1a.5.5 0 0 0-.5.5v6c0 .28.22.5.5.5h3l2 2.5 2-2.5h3a.5.5 0 0 0 .5-.5v-6A.5.5 0 0 0 11 1z"/></svg>
               ${fmtNum(cmtCnt)}
             </span>
+            ${timeStatHtml}
           </div>
         </div>
         <span class="dbi-arrow" aria-hidden="true">›</span>
@@ -653,6 +1107,7 @@ function renderBalanceCard(post, voteCount, heatLevel) {
             <span class="card-balance-voters"><svg class="ic-battle" viewBox="0 0 12 12" fill="none" aria-hidden="true"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1" y1="3.5" x2="3.5" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="8.5" y1="11" x2="11" y2="8.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><strong>${fmtNum(voteCount)}</strong>명 참전</span>
           </div>
         </div>
+        ${post.expires_at ? `<div class="card-time-left"><span data-expires="${escapeHtml(post.expires_at)}"></span></div>` : ''}
       </div>
     </div>`;
 }
@@ -791,22 +1246,21 @@ grid.addEventListener('keydown', e => {
   const card = e.target.closest('.card-balance');
   if (!card || !card.dataset.id) return;
   e.preventDefault();
-  if (window.openVoteModal) openVoteModal(card.dataset.id);
+  location.href = `post.html?id=${card.dataset.id}`;
 });
 
 
 // ── 히어로 배틀 클릭/키보드 ──────────────────────────────
 if (heroBattle) {
   heroBattle.addEventListener('click', e => {
-    // 투표 CTA 버튼은 버블링으로 처리
     if (!heroBattle.dataset.id) return;
-    if (window.openVoteModal) openVoteModal(heroBattle.dataset.id);
+    location.href = `post.html?id=${heroBattle.dataset.id}`;
   });
   heroBattle.addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
     if (!heroBattle.dataset.id) return;
-    if (window.openVoteModal) openVoteModal(heroBattle.dataset.id);
+    location.href = `post.html?id=${heroBattle.dataset.id}`;
   });
 }
 
@@ -816,13 +1270,44 @@ const heroVoteBtnB = document.getElementById('heroVoteBtnB');
 if (heroVoteBtnA) {
   heroVoteBtnA.addEventListener('click', e => {
     e.stopPropagation();
-    if (heroBattle?.dataset.id && window.openVoteModal) openVoteModal(heroBattle.dataset.id);
+    if (heroBattle?.dataset.id) location.href = `post.html?id=${heroBattle.dataset.id}`;
   });
 }
 if (heroVoteBtnB) {
   heroVoteBtnB.addEventListener('click', e => {
     e.stopPropagation();
-    if (heroBattle?.dataset.id && window.openVoteModal) openVoteModal(heroBattle.dataset.id);
+    if (heroBattle?.dataset.id) location.href = `post.html?id=${heroBattle.dataset.id}`;
+  });
+}
+
+// ── 마감 임박 리스트 이벤트 위임 ─────────────────────────
+if (urgentGameList) {
+  urgentGameList.addEventListener('click', e => {
+    const item = e.target.closest('.urgent-game-item');
+    if (!item || !item.dataset.id) return;
+    location.href = `post.html?id=${item.dataset.id}`;
+  });
+  urgentGameList.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const item = e.target.closest('.urgent-game-item');
+    if (!item || !item.dataset.id) return;
+    e.preventDefault();
+    location.href = `post.html?id=${item.dataset.id}`;
+  });
+}
+
+// ── 토론 서브탭 (진행 중 / 마감됨) 이벤트 ───────────────
+if (debateSubTabs) {
+  debateSubTabs.addEventListener('click', e => {
+    const tab = e.target.closest('.debate-sub-tab');
+    if (!tab) return;
+    const dtab = tab.dataset.dtab;
+    if (dtab === currentDebateTab) return;
+    if (dtab === 'closed') {
+      loadClosedDebatesTab();
+    } else {
+      loadDebateBarPage();
+    }
   });
 }
 
@@ -831,14 +1316,14 @@ if (debatesBarList) {
   debatesBarList.addEventListener('click', e => {
     const item = e.target.closest('.debate-bar-item');
     if (!item || !item.dataset.id) return;
-    if (window.openVoteModal) openVoteModal(item.dataset.id);
+    location.href = `post.html?id=${item.dataset.id}`;
   });
   debatesBarList.addEventListener('keydown', e => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const item = e.target.closest('.debate-bar-item');
     if (!item || !item.dataset.id) return;
     e.preventDefault();
-    if (window.openVoteModal) openVoteModal(item.dataset.id);
+    location.href = `post.html?id=${item.dataset.id}`;
   });
 }
 
@@ -888,10 +1373,29 @@ sortBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     sortBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    currentSort = btn.dataset.sort;
-    loadPosts();
+    if (currentDebateTab === 'closed') {
+      closedSort = btn.dataset.sort;
+      loadClosedDebates();
+    } else {
+      currentSort = btn.dataset.sort;
+      loadPosts();
+    }
   });
 });
+
+// Sort direction toggle
+const sortDirBtn = document.getElementById('sortDirBtn');
+if (sortDirBtn) {
+  sortDirBtn.addEventListener('click', () => {
+    currentSortAsc = !currentSortAsc;
+    sortDirBtn.classList.toggle('asc', currentSortAsc);
+    if (currentDebateTab === 'closed') {
+      loadClosedDebates();
+    } else {
+      loadPosts();
+    }
+  });
+}
 
 // 모바일 카테고리 셀렉트 연동
 const catSelectMobile = document.getElementById('catSelectMobile');

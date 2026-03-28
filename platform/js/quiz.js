@@ -117,6 +117,10 @@ function renderQuestion() {
   document.getElementById('questionNumber').textContent = `문제 ${current + 1}`;
   document.getElementById('questionText').textContent   = q.question_text;
 
+  // 문제 이미지 — src 속성으로만 제어 (CSS: [src]:not([src=""]) { display:block })
+  const qImg = document.getElementById('questionImage');
+  if (qImg) qImg.src = q.image_url ?? '';
+
   // 피드백 초기화
   const feedback = document.getElementById('answerFeedback');
   feedback.style.display = 'none';

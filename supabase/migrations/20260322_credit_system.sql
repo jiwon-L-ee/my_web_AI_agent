@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS vote_changes (
   from_choice   TEXT NOT NULL,          -- 'A' | 'B'
   to_choice     TEXT NOT NULL,          -- 'A' | 'B'
   comment_id    UUID REFERENCES comments(id) ON DELETE SET NULL,
-  credits_spent NUMERIC(8,2) DEFAULT 5,
+  credits_spent NUMERIC(8,2) DEFAULT 5, -- [BALANCE:VOTE_CHANGE_COST] 투표 변경 비용 기본값: 5 → docs/balance.md 참고
   changed_at    TIMESTAMPTZ DEFAULT now()
 );
 
@@ -93,6 +93,7 @@ CREATE POLICY "vote_changes_select_own"
 CREATE OR REPLACE FUNCTION handle_signup_bonus()
 RETURNS TRIGGER AS $$
 BEGIN
+  -- [BALANCE:SIGNUP_BONUS] 가입 보너스: 30 크레딧 → docs/balance.md 참고
   INSERT INTO credits (user_id, amount, reason)
   VALUES (NEW.id, 30, 'signup_bonus');
   RETURN NEW;

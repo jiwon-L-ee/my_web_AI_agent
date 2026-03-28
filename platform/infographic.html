@@ -19,6 +19,8 @@
   --accent: #e94560;
   --blue: #2f80ed;
   --orange: #f5a623;
+  --green: #4ade80;
+  --purple: #a78bfa;
   --font: 'Pretendard Variable', Pretendard, sans-serif;
   --display: 'Black Han Sans', var(--font);
 }
@@ -448,7 +450,7 @@ a { color: inherit; text-decoration: none; }
 
 .cat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 22px;
   margin-top: 56px;
 }
@@ -477,11 +479,14 @@ a { color: inherit; text-decoration: none; }
 .cat-card--balance:hover { border-color: rgba(47,128,237,0.5); box-shadow: 0 20px 50px rgba(47,128,237,0.12); }
 .cat-card--balance .cat-card-bg { background: radial-gradient(ellipse at 50% 0%, rgba(47,128,237,0.14) 0%, transparent 65%); }
 
-.cat-card--ox:hover { border-color: rgba(233,69,96,0.5); box-shadow: 0 20px 50px rgba(233,69,96,0.12); }
-.cat-card--ox .cat-card-bg { background: radial-gradient(ellipse at 50% 0%, rgba(233,69,96,0.14) 0%, transparent 65%); }
+.cat-card--quiz:hover { border-color: rgba(233,69,96,0.5); box-shadow: 0 20px 50px rgba(233,69,96,0.12); }
+.cat-card--quiz .cat-card-bg { background: radial-gradient(ellipse at 50% 0%, rgba(233,69,96,0.14) 0%, transparent 65%); }
 
 .cat-card--test:hover { border-color: rgba(245,166,35,0.5); box-shadow: 0 20px 50px rgba(245,166,35,0.12); }
 .cat-card--test .cat-card-bg { background: radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.14) 0%, transparent 65%); }
+
+.cat-card--community:hover { border-color: rgba(74,222,128,0.5); box-shadow: 0 20px 50px rgba(74,222,128,0.12); }
+.cat-card--community .cat-card-bg { background: radial-gradient(ellipse at 50% 0%, rgba(74,222,128,0.12) 0%, transparent 65%); }
 
 .cat-visual {
   height: 80px;
@@ -503,17 +508,36 @@ a { color: inherit; text-decoration: none; }
 .ab-block--b { background: rgba(245,166,35,0.15); border: 1.5px solid rgba(245,166,35,0.3); color: var(--orange); }
 .ab-vs { font-size: 0.7rem; font-weight: 900; color: var(--accent); letter-spacing: 0.1em; flex-shrink: 0; }
 
-.ox-visual { display: flex; align-items: center; gap: 14px; }
-.ox-symbol {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 1.4rem;
+.quiz-types-visual {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.ox-o { background: rgba(47,128,237,0.15); border: 2px solid rgba(47,128,237,0.4); color: var(--blue); }
-.ox-x { background: rgba(233,69,96,0.15); border: 2px solid rgba(233,69,96,0.4); color: var(--accent); }
+.quiz-type-badge {
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.qtb-ox   { background: rgba(47,128,237,0.15); border: 1px solid rgba(47,128,237,0.3); color: var(--blue); }
+.qtb-mc   { background: rgba(233,69,96,0.15);  border: 1px solid rgba(233,69,96,0.3);  color: var(--accent); }
+.qtb-sh   { background: rgba(245,166,35,0.15); border: 1px solid rgba(245,166,35,0.3); color: var(--orange); }
+.qtb-sub  { background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3); color: var(--purple); }
 
-.test-visual { font-size: 3.2rem; line-height: 1; filter: drop-shadow(0 0 20px rgba(245,166,35,0.4)); }
+.test-visual-svg {
+  width: 60px;
+  height: 60px;
+  color: var(--orange);
+  filter: drop-shadow(0 0 18px rgba(245,166,35,0.45));
+}
+
+.community-visual-svg {
+  width: 56px;
+  height: 56px;
+  color: var(--green);
+  filter: drop-shadow(0 0 16px rgba(74,222,128,0.4));
+}
 
 .cat-name { font-family: var(--display); font-size: 1.3rem; margin-bottom: 10px; }
 .cat-desc { font-size: 0.87rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 22px; }
@@ -526,57 +550,207 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
   letter-spacing: 0.05em;
 }
-.chip--blue   { background: rgba(47,128,237,0.15); color: var(--blue); }
-.chip--red    { background: rgba(233,69,96,0.15);  color: var(--accent); }
-.chip--orange { background: rgba(245,166,35,0.15); color: var(--orange); }
+.chip--blue    { background: rgba(47,128,237,0.15);  color: var(--blue); }
+.chip--red     { background: rgba(233,69,96,0.15);   color: var(--accent); }
+.chip--orange  { background: rgba(245,166,35,0.15);  color: var(--orange); }
+.chip--green   { background: rgba(74,222,128,0.15);  color: var(--green); }
 
-/* ── STATS ── */
-.stats-section {
-  padding: 100px 24px;
-  background: var(--surface);
+/* ── FEATURES (credit / ranking / rebuttal / notification) ── */
+.features-section {
+  padding: 120px 24px;
+  background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 50%, var(--bg) 100%);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  text-align: center;
-  position: relative;
-  overflow: hidden;
 }
-.stats-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(233,69,96,0.06) 0%, transparent 60%);
-  pointer-events: none;
+.features-inner {
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-.stats-grid {
+.feat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  max-width: 900px;
-  margin: 64px auto 0;
-  position: relative;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 56px;
 }
 
-.stat-item {
-  padding: 24px 16px;
-  border-radius: 16px;
+.feat-card {
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
-  transition: border-color 0.2s;
+  border-radius: 20px;
+  padding: 32px 28px;
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  transition: border-color 0.22s, transform 0.28s cubic-bezier(0.22,1,0.36,1);
 }
-.stat-item:hover { border-color: var(--accent); }
+.feat-card:hover { border-color: rgba(233,69,96,0.3); transform: translateY(-4px); }
 
-.stat-num {
-  font-family: 'Black Han Sans', sans-serif;
-  font-size: clamp(2.4rem, 4vw, 3.5rem);
-  line-height: 1;
-  background: linear-gradient(160deg, #fff 0%, var(--orange) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 10px;
+.feat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-.stat-lbl { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+.feat-icon--credit   { background: rgba(245,166,35,0.12); color: var(--orange); }
+.feat-icon--ranking  { background: rgba(233,69,96,0.12);  color: var(--accent); }
+.feat-icon--rebuttal { background: rgba(47,128,237,0.12); color: var(--blue); }
+.feat-icon--notif    { background: rgba(74,222,128,0.12); color: var(--green); }
+.feat-icon--profile  { background: rgba(167,139,250,0.12); color: var(--purple); }
+.feat-icon--guest    { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+
+.feat-body {}
+.feat-title {
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.feat-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+
+/* ── CREDIT SYSTEM ── */
+.credit-section {
+  padding: 120px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.credit-flow {
+  margin-top: 56px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  align-items: start;
+}
+
+.credit-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.credit-col-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.credit-col-title--earn  { color: var(--green); }
+.credit-col-title--spend { color: var(--orange); }
+
+.credit-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.credit-item--earn  { border-left: 3px solid rgba(74,222,128,0.5); }
+.credit-item--spend { border-left: 3px solid rgba(245,166,35,0.5); }
+
+.credit-badge {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 1rem;
+  min-width: 56px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.credit-badge--earn  { color: var(--green); }
+.credit-badge--spend { color: var(--orange); }
+.credit-badge--free  { color: var(--text-muted); font-size: 0.8rem; }
+
+.credit-item-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.credit-item-text strong { color: var(--text); font-weight: 700; }
+
+.credit-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 36px;
+  gap: 14px;
+  padding-top: 46px;
+}
+
+.credit-icon-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,166,35,0.2) 0%, transparent 70%);
+  border: 1.5px solid rgba(245,166,35,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--orange);
+  animation: creditGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes creditGlow {
+  0%, 100% { box-shadow: 0 0 14px rgba(245,166,35,0.2); }
+  50%       { box-shadow: 0 0 34px rgba(245,166,35,0.5); }
+}
+
+.credit-arrow-down {
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(180deg, var(--green), transparent);
+}
+.credit-arrow-up {
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(0deg, var(--orange), transparent);
+}
+
+.credit-legal-note {
+  margin-top: 52px;
+  padding: 22px 28px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.credit-legal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(167,139,250,0.1);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.credit-legal-text {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+.credit-legal-text strong { color: var(--text); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .credit-flow { grid-template-columns: 1fr; gap: 24px; }
+  .credit-center { flex-direction: row; padding: 0; padding-top: 0; }
+  .credit-arrow-down, .credit-arrow-up { display: none; }
+}
 
 /* ── CTA ── */
 .cta-section {
@@ -611,7 +785,7 @@ a { color: inherit; text-decoration: none; }
 .cta-btn {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 18px 56px;
   background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%);
   color: #fff;
@@ -627,7 +801,11 @@ a { color: inherit; text-decoration: none; }
 }
 .cta-btn:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 18px 60px rgba(233,69,96,0.65); }
 
-.cta-btn-icon { font-size: 1.2rem; animation: btnFire 1.5s ease-in-out infinite; }
+.cta-btn-icon {
+  animation: btnFire 1.5s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+}
 @keyframes btnFire {
   0%, 100% { transform: scale(1) rotate(-5deg); }
   50%       { transform: scale(1.2) rotate(5deg); }
@@ -650,7 +828,7 @@ a { color: inherit; text-decoration: none; }
   .arena-a { text-align: left; }
   .arena-a .arena-quote { justify-content: flex-start; }
   .cat-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .feat-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -708,7 +886,7 @@ a { color: inherit; text-decoration: none; }
 
     <h1 class="hero-headline">사소한 고집의 끝,<br><em>맞불에서 터진다</em></h1>
     <p class="hero-desc">
-      밸런스게임, OX퀴즈, ML 테스트로<br>
+      밸런스게임, 퀴즈, AI 테스트, 커뮤니티—<br>
       서로 다른 의견이 부딪히고 불꽃이 튀는 공간.
     </p>
     <div class="hero-btns">
@@ -734,7 +912,8 @@ a { color: inherit; text-decoration: none; }
       <div class="section-cap">맞불이란?</div>
       <h2 class="section-h" style="font-family:var(--font);font-weight:800;letter-spacing:-0.02em">불에는 불로,<br>의견에는 의견으로.</h2>
       <p class="section-p">
-        맞불은 '불을 끄기 위해 맞불을 놓는다'는 것처럼, 서로 다른 의견이 부딪혀 새로운 답을 찾아가는 공간입니다. 사소한 취향 차이부터 진지한 가치관 논쟁까지, 당신의 편을 골라보세요.
+        맞불은 '불을 끄기 위해 맞불을 놓는다'는 것처럼, 서로 다른 의견이 부딪혀 새로운 답을 찾아가는 공간입니다.
+        사소한 취향 차이부터 진지한 가치관 논쟁까지, 당신의 편을 골라 상대를 설득해보세요.
       </p>
     </div>
 
@@ -773,11 +952,12 @@ a { color: inherit; text-decoration: none; }
 <!-- ═══ CATEGORIES ═══ -->
 <section class="cat-section">
   <div class="reveal">
-    <div class="section-cap">카테고리</div>
-    <h2 class="section-h">당신의 고집을<br>골라보세요</h2>
+    <div class="section-cap">콘텐츠</div>
+    <h2 class="section-h">4가지 방식으로<br>고집을 펼쳐보세요</h2>
   </div>
 
   <div class="cat-grid">
+    <!-- 밸런스게임 -->
     <div class="cat-card cat-card--balance reveal" style="transition-delay:0.1s">
       <div class="cat-card-bg"></div>
       <div class="cat-visual">
@@ -788,60 +968,328 @@ a { color: inherit; text-decoration: none; }
         </div>
       </div>
       <div class="cat-name">밸런스게임</div>
-      <div class="cat-desc">A냐 B냐, 딱 하나만 골라야 한다면? 쉽게 결정할 수 없는 선택지로 서로의 가치관을 탐색해보세요.</div>
-      <span class="cat-chip chip--blue">A vs B</span>
+      <div class="cat-desc">A냐 B냐, 딱 하나만 골라야 한다면? 투표 후 댓글로 진영을 대표해 상대를 설득하세요. 토론이 마감되면 크레딧을 배분합니다.</div>
+      <span class="cat-chip chip--blue">A vs B · 진영 토론</span>
     </div>
 
-    <div class="cat-card cat-card--ox reveal" style="transition-delay:0.2s">
+    <!-- 퀴즈 -->
+    <div class="cat-card cat-card--quiz reveal" style="transition-delay:0.2s">
       <div class="cat-card-bg"></div>
       <div class="cat-visual">
-        <div class="ox-visual">
-          <div class="ox-symbol ox-o">O</div>
-          <div class="ox-symbol ox-x">X</div>
+        <div class="quiz-types-visual">
+          <span class="quiz-type-badge qtb-ox">O / X</span>
+          <span class="quiz-type-badge qtb-mc">객관식</span>
+          <span class="quiz-type-badge qtb-sh">단답형</span>
+          <span class="quiz-type-badge qtb-sub">주관식</span>
         </div>
       </div>
-      <div class="cat-name">OX퀴즈</div>
-      <div class="cat-desc">맞다 혹은 틀리다. 흑백의 논쟁 속에서 당신은 어느 편에 서 있나요? 주장을 내세우고 맞불을 붙여보세요.</div>
-      <span class="cat-chip chip--red">O or X</span>
+      <div class="cat-name">퀴즈</div>
+      <div class="cat-desc">OX, 객관식, 단답형, 주관식 — 4가지 유형의 퀴즈를 직접 만들고 풀어보세요. 정답이 있는 퀴즈부터 의견을 나누는 주관식까지.</div>
+      <span class="cat-chip chip--red">4가지 유형</span>
     </div>
 
+    <!-- 테스트 -->
     <div class="cat-card cat-card--test reveal" style="transition-delay:0.3s">
       <div class="cat-card-bg"></div>
       <div class="cat-visual">
-        <div class="test-visual">🧠</div>
+        <svg class="test-visual-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 2C9.38 2 7.25 4.13 7.25 6.75c0 1.19.44 2.27 1.16 3.09-.23.37-.41.77-.41 1.16v1.5c0 .55.45 1 1 1s1-.45 1-1v-.5h4v.5c0 .55.45 1 1 1s1-.45 1-1v-1.5c0-.39-.18-.79-.41-1.16.72-.82 1.16-1.9 1.16-3.09C16.75 4.13 14.62 2 12 2z" fill="currentColor" opacity="0.3"/>
+          <path d="M9 9.75C9 8.23 10.34 7 12 7s3 1.23 3 2.75M10 13v3M14 13v3M8 16h8M9 19h6c.55 0 1 .45 1 1v1H8v-1c0-.55.45-1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="10.5" cy="8.5" r="1" fill="currentColor"/>
+          <circle cx="13.5" cy="8.5" r="1" fill="currentColor"/>
+        </svg>
       </div>
       <div class="cat-name">테스트</div>
-      <div class="cat-desc">Teachable Machine AI로 만든 이미지 분석 테스트. 직접 모델을 학습시키고 공유하면 누구나 참여할 수 있어요.</div>
-      <span class="cat-chip chip--orange">AI 테스트</span>
+      <div class="cat-desc">Google Teachable Machine으로 학습시킨 AI 이미지 분류 모델을 공유하고 체험하는 공간. 모델을 만들어 올리면 누구나 참여할 수 있어요.</div>
+      <span class="cat-chip chip--orange">AI · Teachable Machine</span>
+    </div>
+
+    <!-- 커뮤니티 -->
+    <div class="cat-card cat-card--community reveal" style="transition-delay:0.4s">
+      <div class="cat-card-bg"></div>
+      <div class="cat-visual">
+        <svg class="community-visual-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="currentColor" opacity="0.2"/>
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M7 8h10M7 12h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="cat-name">커뮤니티</div>
+      <div class="cat-desc">형식 없이 자유롭게 글을 올리는 공간. 이미지 첨부와 댓글이 지원되며 크레딧 없이 무료로 게시할 수 있습니다.</div>
+      <span class="cat-chip chip--green">자유 게시판 · 무료</span>
     </div>
   </div>
 </section>
 
 <div class="divider"></div>
 
-<!-- ═══ STATS ═══ -->
-<section class="stats-section">
+<!-- ═══ BALANCE GAME RULES ═══ -->
+<section style="padding:120px 24px;max-width:1100px;margin:0 auto">
   <div class="reveal">
-    <div class="section-cap" style="text-align:center">지금 맞불에서는</div>
-    <h2 class="section-h" style="font-size:clamp(1.7rem,4vw,2.6rem);text-align:center">매일 새로운 논쟁이 불타오르고 있습니다</h2>
+    <div class="section-cap">밸런스게임</div>
+    <h2 class="section-h" style="font-family:var(--font);font-weight:800;letter-spacing:-0.02em">A냐 B냐,<br>하나만 골라야 한다</h2>
+    <p class="section-p">맞불의 핵심 콘텐츠. 제작자가 던진 선택지에 투표하고, 같은 진영끼리 뭉쳐 상대를 설득하세요. 논쟁이 팽팽할수록 보상도 커집니다.</p>
   </div>
 
-  <div class="stats-grid reveal" style="transition-delay:0.2s">
-    <div class="stat-item">
-      <div class="stat-num" data-target="1284" data-suffix="">0</div>
-      <div class="stat-lbl">총 게시물</div>
+  <div style="margin-top:56px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px" class="reveal">
+
+    <!-- 투표 방식 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(47,128,237,0.12);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="font-weight:800;font-size:0.95rem">투표</div>
+      </div>
+      <div style="font-size:0.84rem;color:var(--text-muted);line-height:1.75">
+        A 또는 B, 딱 하나만 선택합니다. <strong style="color:var(--text)">로그인 없이도 투표 가능.</strong> 투표 후 1분 이내는 무료로 변경, 이후엔 크레딧이 소모됩니다.
+      </div>
     </div>
-    <div class="stat-item">
-      <div class="stat-num" data-target="48200" data-suffix="">0</div>
-      <div class="stat-lbl">누적 투표수</div>
+
+    <!-- 블라인드 모드 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(233,69,96,0.12);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div style="font-weight:800;font-size:0.95rem">블라인드 결과</div>
+      </div>
+      <div style="font-size:0.84rem;color:var(--text-muted);line-height:1.75">
+        평소엔 실시간 투표 비율이 공개됩니다. 단, <strong style="color:var(--text)">마감 1시간 전부터는 결과가 가려져</strong> 막판 여론몰이 없이 끝까지 팽팽한 논쟁이 유지됩니다.
+      </div>
     </div>
-    <div class="stat-item">
-      <div class="stat-num" data-target="3900" data-suffix="">0</div>
-      <div class="stat-lbl">활성 유저</div>
+
+    <!-- 기간 설정 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(245,166,35,0.12);color:var(--orange);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.8"/></svg>
+        </div>
+        <div style="font-weight:800;font-size:0.95rem">기간 설정</div>
+      </div>
+      <div style="font-size:0.84rem;color:var(--text-muted);line-height:1.75">
+        게시물 제작 시 <strong style="color:var(--text)">3일~7일</strong> 중 기간을 설정합니다. 기간이 길수록 크레딧 비용도 높아집니다. 마감 후 자동 정산.
+      </div>
     </div>
-    <div class="stat-item">
-      <div class="stat-num" data-target="99" data-suffix="%">0</div>
-      <div class="stat-lbl">고집 지수</div>
+
+    <!-- 진영 댓글 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(47,128,237,0.12);color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="font-weight:800;font-size:0.95rem">진영 댓글</div>
+      </div>
+      <div style="font-size:0.84rem;color:var(--text-muted);line-height:1.75">
+        투표 후 내 진영을 대표하는 댓글을 남길 수 있습니다. <strong style="color:var(--text)">A진영 댓글은 왼쪽, B진영은 오른쪽</strong>에 분리 표시됩니다.
+      </div>
+    </div>
+
+    <!-- 반박 & 설득 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(233,69,96,0.12);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.11-3.66 5.65-2.57 8.89.12.35.08.74-.12 1.05-.19.3-.52.47-.86.45-.36-.03-.7-.24-.88-.55C6.32 12.73 6 11.39 6 10.01c0-.38-.08-.73-.31-1.02C5.45 8.67 4.95 8.36 4.5 8c-.04 3.24.88 6.13 2.82 8.02 1.3 1.28 2.97 2.19 4.85 2.47.91.13 1.85.16 2.76 0 2.19-.36 4.09-1.57 5.04-3.61.71-1.53.77-3.27.26-4.88l-.57 1.2z" fill="currentColor"/></svg>
+        </div>
+        <div style="font-weight:800;font-size:0.95rem">반박 & 설득됨</div>
+      </div>
+      <div style="font-size:0.84rem;color:var(--text-muted);line-height:1.75">
+        상대 진영 댓글에 <strong style="color:var(--text)">크레딧 2를 소모해 반박 덧글</strong>을 달 수 있습니다. 상대가 설득되어 투표를 바꿀 때 "설득됐어요"를 선택하면 그 댓글의 기여도가 올라갑니다.
+      </div>
+    </div>
+
+    <!-- 정산 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(74,222,128,0.12);color:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 7.5 12 7.5s2.5.9 2c0 2.5-5 2.5-5 5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div style="font-weight:800;font-size:0.95rem">마감 정산</div>
+      </div>
+      <div style="font-size:0.84rem;color:var(--text-muted);line-height:1.75">
+        기간 만료 후 자동 정산. 승리 진영에 크레딧이 분배되고, <strong style="color:var(--text)">게시물 제작자도 별도 보상</strong>을 받습니다. 팽팽한 논쟁일수록 총 보상이 커집니다.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══ FEATURES ═══ -->
+<section class="features-section">
+  <div class="features-inner">
+    <div class="reveal" style="text-align:center">
+      <div class="section-cap" style="text-align:center">시스템</div>
+      <h2 class="section-h" style="text-align:center;font-size:clamp(1.8rem,4.5vw,3rem)">논쟁을 더 깊게 만드는<br>기능들</h2>
+    </div>
+
+    <div class="feat-grid">
+      <!-- 크레딧 시스템 -->
+      <div class="feat-card reveal" style="transition-delay:0.1s">
+        <div class="feat-icon feat-icon--credit">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 7.5 12 7.5s2.5.9 2.5 2c0 2.5-5 2.5-5 5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-title">크레딧 시스템</div>
+          <div class="feat-desc">게시물 작성과 투표 변경에 크레딧이 소모됩니다. 밸런스게임이 마감될 때 다수결에 따라 크레딧이 배분됩니다. 커뮤니티 게시물은 무료.</div>
+        </div>
+      </div>
+
+      <!-- 반박 댓글 -->
+      <div class="feat-card reveal" style="transition-delay:0.2s">
+        <div class="feat-icon feat-icon--rebuttal">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M9 10h6M9 13h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-title">반박 댓글</div>
+          <div class="feat-desc">상대 진영 댓글에 크레딧 2를 소모해 덧글로 반박할 수 있습니다. 내 댓글이 상대를 설득하면 "설득됨" 좋아요를 받을 수 있어요.</div>
+        </div>
+      </div>
+
+      <!-- 랭킹 -->
+      <div class="feat-card reveal" style="transition-delay:0.3s">
+        <div class="feat-icon feat-icon--ranking">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 18H5V9h3v9zM13 18h-3V6h3v12zM18 18h-3v-6h3v6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-title">랭킹</div>
+          <div class="feat-desc">크레딧, 좋아요, 설득함, 팔로워, 종합 점수 — 5가지 기준으로 유저 순위를 확인하세요. 종합 점수는 크레딧·좋아요·설득력·팔로워를 합산합니다.</div>
+        </div>
+      </div>
+
+      <!-- 인앱 알림 -->
+      <div class="feat-card reveal" style="transition-delay:0.4s">
+        <div class="feat-icon feat-icon--notif">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-title">인앱 알림</div>
+          <div class="feat-desc">내 댓글에 반박이 달리거나 참여한 토론이 마감되면 벨 아이콘으로 알림이 옵니다. 로그인 사용자 전용.</div>
+        </div>
+      </div>
+
+      <!-- 프로필 & 팔로우 -->
+      <div class="feat-card reveal" style="transition-delay:0.5s">
+        <div class="feat-icon feat-icon--profile">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-title">프로필 & 팔로우</div>
+          <div class="feat-desc">다른 유저의 프로필을 방문해 게시물과 통계를 확인하고, 팔로우할 수 있습니다. 내 마이페이지에서 내 활동 통계도 볼 수 있어요.</div>
+        </div>
+      </div>
+
+      <!-- 비로그인 투표 -->
+      <div class="feat-card reveal" style="transition-delay:0.6s">
+        <div class="feat-icon feat-icon--guest">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" fill="currentColor" opacity="0.2"/>
+            <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M6 20c0-3.31 2.69-5 6-5s6 1.69 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 2"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-title">비로그인 투표</div>
+          <div class="feat-desc">회원가입 없이도 밸런스게임에 투표할 수 있습니다. 단, 댓글 작성·게시물 등록·크레딧 시스템은 로그인이 필요합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CREDIT SYSTEM ═══ -->
+<div class="divider"></div>
+<section class="credit-section">
+  <div class="reveal">
+    <div class="section-cap">크레딧 시스템</div>
+    <h2 class="section-h" style="font-family:var(--font);font-weight:800;letter-spacing:-0.02em">참여하면 쌓이고,<br>쓸수록 더 뜨거워진다</h2>
+    <p class="section-p">
+      크레딧은 맞불 안에서만 통용되는 게임 포인트입니다.
+      현금이나 재화로 교환되지 않으며, 오직 플랫폼을 더 재미있게 즐기기 위한 수단입니다.
+    </p>
+  </div>
+
+  <div class="credit-flow reveal" style="transition-delay:0.15s">
+    <!-- 획득 -->
+    <div class="credit-col">
+      <div class="credit-col-title credit-col-title--earn">획득</div>
+      <div class="credit-item credit-item--earn">
+        <div class="credit-badge credit-badge--earn">+기여도</div>
+        <div class="credit-item-text"><strong>승리 진영 분배</strong><br>설득됨×3 + 좋아요×1 기여도에 비례해 지급</div>
+      </div>
+      <div class="credit-item credit-item--earn">
+        <div class="credit-badge credit-badge--earn">+고정</div>
+        <div class="credit-item-text"><strong>제작자 보상</strong><br>게임 마감 시 제작자에게 C크레딧 별도 지급</div>
+      </div>
+      <div class="credit-item" style="border-left:3px solid rgba(74,222,128,0.3);background:rgba(74,222,128,0.04)">
+        <div class="credit-badge" style="color:var(--text-muted);font-size:0.72rem;min-width:56px;text-align:center">참고</div>
+        <div class="credit-item-text">C = 로그인 투표자 수 × 팽팽함 지수<br><span style="font-size:0.78rem;opacity:0.7">50:50에 가까울수록 총 보상 증가</span></div>
+      </div>
+    </div>
+
+    <!-- 가운데 아이콘 -->
+    <div class="credit-center">
+      <div class="credit-arrow-down"></div>
+      <div class="credit-icon-wrap">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 7v1.5M12 15.5V17M9.5 9.5C9.5 8.4 10.6 7.5 12 7.5s2.5.9 2.5 2c0 2.5-5 2.5-5 5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="credit-arrow-up"></div>
+    </div>
+
+    <!-- 사용 -->
+    <div class="credit-col">
+      <div class="credit-col-title credit-col-title--spend">사용</div>
+      <div class="credit-item credit-item--spend">
+        <div class="credit-badge credit-badge--spend">−20~40</div>
+        <div class="credit-item-text"><strong>밸런스게임 게시</strong><br>3일 20크레딧, 최대 7일 40크레딧</div>
+      </div>
+      <div class="credit-item credit-item--spend">
+        <div class="credit-badge credit-badge--spend">−20</div>
+        <div class="credit-item-text"><strong>퀴즈 / 테스트 게시</strong><br>콘텐츠 제작 비용</div>
+      </div>
+      <div class="credit-item credit-item--spend">
+        <div class="credit-badge credit-badge--spend">−2</div>
+        <div class="credit-item-text"><strong>반박 댓글</strong><br>상대 진영에 덧글로 반박하기</div>
+      </div>
+      <div class="credit-item credit-item--spend">
+        <div class="credit-badge credit-badge--spend">−소정</div>
+        <div class="credit-item-text"><strong>투표 변경</strong><br>1분 이후 선택을 바꿀 때</div>
+      </div>
+      <div class="credit-item" style="border-left:3px solid rgba(139,148,158,0.3)">
+        <div class="credit-badge credit-badge--free">무료</div>
+        <div class="credit-item-text"><strong>커뮤니티 게시</strong><br>크레딧 없이 자유롭게</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 법적 안내 -->
+  <div class="credit-legal-note reveal" style="transition-delay:0.3s">
+    <div class="credit-legal-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="credit-legal-text">
+      <strong>크레딧은 순수 게임 포인트입니다.</strong> 맞불 크레딧은 현금, 상품권, 실물 재화와 일절 교환되지 않으며 환급·환전이 불가합니다. 유료 구매 수단도 존재하지 않습니다. 오직 플랫폼 내 콘텐츠 참여를 더 즐겁게 만들기 위한 게임 메커닉으로, 도박·사행성과는 전혀 무관합니다.
     </div>
   </div>
 </section>
@@ -853,7 +1301,11 @@ a { color: inherit; text-decoration: none; }
     <h2 class="cta-h">당신의 고집은<br><span>어디에 있나요?</span></h2>
     <p class="cta-p">사소하지만 진지한 논쟁의 세계로 오세요.</p>
     <a href="index.html" class="cta-btn">
-      <span class="cta-btn-icon">🔥</span>
+      <span class="cta-btn-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.11-3.66 5.65-2.57 8.89.12.35.08.74-.12 1.05-.19.3-.52.47-.86.45-.36-.03-.7-.24-.88-.55C6.32 12.73 6 11.39 6 10.01c0-.38-.08-.73-.31-1.02C5.45 8.67 4.95 8.36 4.5 8c-.04 3.24.88 6.13 2.82 8.02 1.3 1.28 2.97 2.19 4.85 2.47.91.13 1.85.16 2.76 0 2.19-.36 4.09-1.57 5.04-3.61.71-1.53.77-3.27.26-4.88l-.57 1.2z"/>
+        </svg>
+      </span>
       맞불 시작하기
     </a>
   </div>
@@ -928,29 +1380,9 @@ const io = new IntersectionObserver((entries) => {
   entries.forEach(e => {
     if (!e.isIntersecting) return;
     e.target.classList.add('in');
-    e.target.querySelectorAll('[data-target]').forEach(startCounter);
   });
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-/* ── Counter Animation ── */
-function startCounter(el) {
-  if (el._done) return;
-  el._done = true;
-  const target = parseInt(el.dataset.target);
-  const suffix = el.dataset.suffix || '';
-  const dur = 2000;
-  const t0 = performance.now();
-  const fmt = v => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v;
-
-  (function tick(now) {
-    const p = Math.min((now - t0) / dur, 1);
-    const ease = 1 - Math.pow(1 - p, 3);
-    el.textContent = fmt(Math.round(ease * target)) + suffix;
-    if (p < 1) requestAnimationFrame(tick);
-    else el.textContent = fmt(target) + suffix;
-  })(performance.now());
-}
 </script>
 </body>
 </html>

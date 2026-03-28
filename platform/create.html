@@ -192,6 +192,94 @@
       .ab-vs { padding-top: 0; padding-bottom: 4px; }
     }
 
+    /* ── 밸런스게임 기간 선택 ── */
+    .duration-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .duration-btn {
+      flex: 1;
+      min-width: 52px;
+      padding: 10px 6px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .duration-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(233,69,96,0.07);
+    }
+    .duration-btn .dur-cost {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 400;
+      margin-top: 2px;
+      opacity: 0.75;
+    }
+    .duration-credit-notice {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .duration-credit-notice strong {
+      color: var(--accent);
+    }
+
+    /* ── 크레딧 계산서 ── */
+    .credit-receipt {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 28px;
+      display: none;
+    }
+    .credit-receipt.visible { display: block; }
+    .credit-receipt-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+    .credit-receipt-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .credit-receipt-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .credit-receipt-row .row-label { color: var(--text-muted); }
+    .credit-receipt-row .row-val   { font-weight: 500; }
+    .credit-receipt-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 10px 0;
+    }
+    .credit-receipt-total {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .credit-receipt-total #creditReceiptTotal { color: var(--accent); }
+
     /* ── 심플 폼 (커뮤니티/정보) ── */
     .create-simple .form-textarea {
       min-height: 240px;
@@ -227,6 +315,78 @@
       color: #fff; font-size: 0.7rem; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
+
+    /* ── 썸네일 드롭존 ── */
+    .thumb-upload-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      padding: 24px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .thumb-upload-zone:hover,
+    .thumb-upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(233,69,96,0.03);
+    }
+    .thumb-upload-zone p { margin: 0; }
+    .thumb-upload-hint { font-size: 0.85rem; color: var(--text-muted); }
+    .thumb-upload-link { color: var(--accent); text-decoration: underline; }
+    .thumb-upload-sub  { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; opacity: 0.7; }
+    .thumb-preview-box {
+      display: none;
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 10px;
+      background: var(--surface2);
+    }
+    .thumb-preview-box img {
+      width: 100%; display: block;
+      max-height: 200px; object-fit: cover;
+    }
+    .thumb-preview-remove {
+      position: absolute; top: 6px; right: 6px;
+      background: rgba(0,0,0,0.65); border: none;
+      border-radius: 50%; width: 26px; height: 26px;
+      color: #fff; cursor: pointer; font-size: 1rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .thumb-preview-remove:hover { background: rgba(233,69,96,0.85); }
+
+    /* ── 퀴즈 문항 이미지 ── */
+    .question-img-section { margin-top: 12px; }
+    .question-img-zone {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 12px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 7px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      user-select: none;
+    }
+    .question-img-zone:hover { border-color: var(--accent); color: var(--accent); }
+    .question-img-thumb {
+      margin-top: 8px; position: relative; display: inline-flex;
+    }
+    .question-img-thumb img {
+      max-width: 160px; max-height: 120px;
+      border-radius: 6px; border: 1px solid var(--border);
+      display: block; object-fit: contain;
+    }
+    .question-img-thumb-del {
+      position: absolute; top: 3px; right: 3px;
+      background: rgba(0,0,0,0.65); border: none;
+      border-radius: 50%; width: 20px; height: 20px;
+      color: #fff; cursor: pointer; font-size: 0.7rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .question-img-thumb-del:hover { background: rgba(233,69,96,0.85); }
   </style>
 </head>
 <body>
@@ -242,7 +402,7 @@
       <a href="index.html?cat=토론" class="nav-link" data-cat="토론">토론</a>
       <a href="index.html?cat=퀴즈" class="nav-link" data-cat="퀴즈">퀴즈</a>
       <a href="index.html?cat=커뮤니티" class="nav-link" data-cat="커뮤니티">커뮤니티</a>
-      <a href="index.html?cat=정보" class="nav-link" data-cat="정보">정보</a>
+      <a href="ranking.html" class="nav-link">랭킹</a>
     </div>
     <div class="nav-auth" id="navAuth">
       <a href="login.html" class="btn-login">로그인</a>
@@ -272,22 +432,12 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M6 2v6M18 2v6"/><path d="M3 8h18"/><path d="M3 8v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8"/></svg>
         <span class="cat-tab-label">테스트</span>
       </button>
-      <button type="button" class="cat-tab" data-cat="커뮤니티" role="tab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span class="cat-tab-label">커뮤니티</span>
-      </button>
-      <button type="button" class="cat-tab" data-cat="정보" role="tab">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span class="cat-tab-label">정보</span>
-      </button>
     </div>
     <!-- hidden input for categorySelect (create.js 호환) -->
     <select id="categorySelect" style="display:none">
       <option value="밸런스게임" selected>밸런스게임</option>
       <option value="퀴즈">퀴즈</option>
       <option value="테스트">테스트</option>
-      <option value="커뮤니티">커뮤니티</option>
-      <option value="정보">정보</option>
     </select>
 
     <!-- 공통: 제목 -->
@@ -313,19 +463,49 @@
         <label class="form-label" for="descInput">설명 <span class="form-hint" style="display:inline;text-transform:none;letter-spacing:0">선택사항</span></label>
         <textarea id="descInput" class="form-textarea" placeholder="게임 상황을 설명해 주세요." maxlength="500"></textarea>
       </div>
-      <!-- 썸네일 -->
-      <div class="form-group" id="thumbGroup">
-        <label class="form-label" for="thumbInput">썸네일 <span class="form-hint" style="display:inline;text-transform:none;letter-spacing:0">선택사항</span></label>
-        <input id="thumbInput" class="form-input" type="file" accept="image/*" style="padding:8px">
-        <div id="thumbPreview" class="thumb-preview">
-          <img id="thumbPreviewImg" alt="thumbnail preview">
+      <!-- 밸런스게임 기간 선택 -->
+      <!-- [BALANCE:GAME_CREATE_BASE] [BALANCE:GAME_CREATE_PER_DAY] [BALANCE:GAME_MAX_DAYS] -->
+      <!-- ※ 비용 변경 시 create.js calcDurationCost()도 함께 수정 → docs/balance.md 참고 -->
+      <div class="form-group">
+        <label class="form-label">게임 기간 *</label>
+        <div class="duration-row" id="durationRow">
+          <button type="button" class="duration-btn active" data-days="3">
+            3일<span class="dur-cost">20 크레딧</span>
+          </button>
+          <button type="button" class="duration-btn" data-days="4">
+            4일<span class="dur-cost">25 크레딧</span>
+          </button>
+          <button type="button" class="duration-btn" data-days="5">
+            5일<span class="dur-cost">30 크레딧</span>
+          </button>
+          <button type="button" class="duration-btn" data-days="6">
+            6일<span class="dur-cost">35 크레딧</span>
+          </button>
+          <button type="button" class="duration-btn" data-days="7">
+            7일<span class="dur-cost">40 크레딧</span>
+          </button>
         </div>
-        <p class="form-hint">권장 비율: 16:9, 최대 2MB</p>
+        <p class="duration-credit-notice">기본 <strong>20 크레딧</strong> + 추가 1일마다 <strong>5 크레딧</strong></p>
       </div>
     </div>
 
     <!-- 퀴즈 전용 -->
     <div id="quizFields" style="display:none">
+      <p class="duration-credit-notice">퀴즈 생성 비용: <strong>20 크레딧</strong></p>
+      <!-- 퀴즈 썸네일 -->
+      <div class="form-group" id="thumbGroupQuiz">
+        <label class="form-label">썸네일 <span class="form-hint" style="display:inline;text-transform:none;letter-spacing:0">선택사항</span></label>
+        <input type="file" id="thumbInputQuiz" accept="image/*" style="display:none">
+        <div class="thumb-upload-zone" id="thumbZoneQuiz">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35;display:block;margin:0 auto 10px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p class="thumb-upload-hint">이미지를 끌어다 놓거나 <span class="thumb-upload-link">클릭하여 선택</span></p>
+          <p class="thumb-upload-sub">권장 비율 16:9 · 최대 2MB</p>
+        </div>
+        <div class="thumb-preview-box" id="thumbPreviewQuiz">
+          <img id="thumbPreviewImgQuiz" alt="thumbnail preview">
+          <button type="button" class="thumb-preview-remove" data-input="thumbInputQuiz" aria-label="썸네일 삭제">×</button>
+        </div>
+      </div>
       <div id="quizBuilderGroup">
         <div class="form-group">
           <label class="form-label">퀴즈 유형 *</label>
@@ -354,6 +534,7 @@
 
     <!-- 테스트 전용 -->
     <div id="testFields" style="display:none">
+      <p class="duration-credit-notice">테스트 생성 비용: <strong>20 크레딧</strong></p>
       <div class="form-group" id="modelUrlGroup">
         <label class="form-label" for="modelUrlInput">Teachable Machine 모델 URL *</label>
         <input id="modelUrlInput" class="form-input" type="url" placeholder="https://teachablemachine.withgoogle.com/models/XXXXX/">
@@ -364,12 +545,17 @@
         <textarea id="descInputTest" class="form-textarea" placeholder="테스트 소개를 입력하세요." maxlength="500"></textarea>
       </div>
       <div class="form-group" id="thumbGroupTest">
-        <label class="form-label" for="thumbInputTest">썸네일 <span class="form-hint" style="display:inline;text-transform:none;letter-spacing:0">선택사항</span></label>
-        <input id="thumbInputTest" class="form-input" type="file" accept="image/*" style="padding:8px">
-        <div id="thumbPreviewTest" class="thumb-preview">
-          <img id="thumbPreviewImgTest" alt="thumbnail preview">
+        <label class="form-label">썸네일 <span class="form-hint" style="display:inline;text-transform:none;letter-spacing:0">선택사항</span></label>
+        <input type="file" id="thumbInputTest" accept="image/*" style="display:none">
+        <div class="thumb-upload-zone" id="thumbZoneTest">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35;display:block;margin:0 auto 10px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <p class="thumb-upload-hint">이미지를 끌어다 놓거나 <span class="thumb-upload-link">클릭하여 선택</span></p>
+          <p class="thumb-upload-sub">권장 비율 16:9 · 최대 2MB</p>
         </div>
-        <p class="form-hint">권장 비율: 16:9, 최대 2MB</p>
+        <div class="thumb-preview-box" id="thumbPreviewTest">
+          <img id="thumbPreviewImgTest" alt="thumbnail preview">
+          <button type="button" class="thumb-preview-remove" data-input="thumbInputTest" aria-label="썸네일 삭제">×</button>
+        </div>
       </div>
     </div>
 
@@ -403,6 +589,16 @@
       </div>
     </div>
 
+    <!-- 크레딧 계산서 -->
+    <div class="credit-receipt" id="creditReceipt">
+      <div class="credit-receipt-title">크레딧 사용 내역</div>
+      <div class="credit-receipt-rows" id="creditReceiptRows"></div>
+      <div class="credit-receipt-total">
+        <span>총 사용 크레딧</span>
+        <span id="creditReceiptTotal">0 크레딧</span>
+      </div>
+    </div>
+
     <!-- 하단: 약관 + 버튼 -->
     <div class="create-footer" style="margin-top:28px">
       <div class="terms-section" id="termsSection">
@@ -426,6 +622,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/notifications.js"></script>
 <script src="js/create.js"></script>
 <script src="js/legal-modal.js"></script>
 <script>

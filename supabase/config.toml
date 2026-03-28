@@ -1,0 +1,2 @@
+[functions.settle-balance-games]
+verify_jwt = false

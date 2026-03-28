@@ -33,6 +33,18 @@ async function signInWithEmail(email, password) {
   return data;
 }
 
+async function resetPasswordForEmail(email) {
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: location.origin + '/platform/reset-password.html',
+  });
+  if (error) throw error;
+}
+
+async function updatePassword(newPassword) {
+  const { error } = await db.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 async function signOut() {
   await db.auth.signOut();
   location.href = 'index.html';
@@ -77,6 +89,19 @@ async function updateNavbar(user) {
       : '';
     navAuth.innerHTML = `
       ${creditHtml}
+      <div class="notif-bell-wrap" id="notifBellWrap">
+        <button class="notif-bell" id="notifBell" aria-label="알림">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown" style="display:none">
+          <div class="notif-dropdown-header">
+            <span>알림</span>
+            <button class="notif-mark-all" id="notifMarkAll">모두 읽음</button>
+          </div>
+          <div class="notif-list" id="notifList"></div>
+        </div>
+      </div>
       <a href="mypage.html" class="nav-avatar" title="${escapeHtml(displayName)}">
         ${avatarUrl
           ? `<img src="${escapeHtml(avatarUrl)}" alt="내 프로필">`
@@ -84,6 +109,9 @@ async function updateNavbar(user) {
         }
       </a>
     `;
+    if (typeof initNotifications === 'function') {
+      initNotifications(user);
+    }
   } else {
     navAuth.innerHTML = `<a href="login.html" class="btn-login">로그인</a>`;
   }

@@ -1,16 +1,32 @@
 // settle-balance-games Edge Function
-// Cron: 매 시간 만료된 밸런스게임을 탐지하여 크레딧을 정산합니다.
+// POST { post_id? } → 특정 게임 정산 / 인수 없으면 만료된 전체 배치 정산
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const BATCH_SIZE = 50;
 const K = 1.0; // 크레딧 계수 (경제 균형 보며 조정)
 
-Deno.serve(async (_req) => {
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS });
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
+
+  // 선택적 post_id 파라미터
+  let targetPostId: string | null = null;
+  try {
+    const body = await req.json();
+    targetPostId = body?.post_id ?? null;
+  } catch { /* body 없으면 전체 배치 모드 */ }
 
   // 만료됐지만 아직 post_results에 없는 게임 조회
   const { data: settledIds } = await supabase
@@ -19,6 +35,14 @@ Deno.serve(async (_req) => {
 
   const excludeIds = (settledIds ?? []).map((r: { post_id: string }) => r.post_id);
 
+  // targetPostId가 이미 정산됐으면 early return
+  if (targetPostId && excludeIds.includes(targetPostId)) {
+    return new Response(
+      JSON.stringify({ already_settled: true }),
+      { headers: { ...CORS, 'Content-Type': 'application/json' } }
+    );
+  }
+
   let query = supabase
     .from('posts')
     .select('id, user_id')
@@ -26,7 +50,9 @@ Deno.serve(async (_req) => {
     .lte('expires_at', new Date().toISOString())
     .limit(BATCH_SIZE);
 
-  if (excludeIds.length > 0) {
+  if (targetPostId) {
+    query = query.eq('id', targetPostId);
+  } else if (excludeIds.length > 0) {
     query = query.not('id', 'in', `(${excludeIds.map((id: string) => `"${id}"`).join(',')})`);
   }
 
@@ -34,11 +60,17 @@ Deno.serve(async (_req) => {
 
   if (error) {
     console.error('posts query error:', error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } }
+    );
   }
 
   if (!posts?.length) {
-    return new Response(JSON.stringify({ settled: 0, message: '정산할 게임 없음' }), { status: 200 });
+    return new Response(
+      JSON.stringify({ settled: 0, message: '정산할 게임 없음' }),
+      { headers: { ...CORS, 'Content-Type': 'application/json' } }
+    );
   }
 
   let settled = 0;
@@ -57,7 +89,7 @@ Deno.serve(async (_req) => {
 
   return new Response(
     JSON.stringify({ settled, errors: errors.length ? errors : undefined }),
-    { status: 200 }
+    { headers: { ...CORS, 'Content-Type': 'application/json' } }
   );
 });
 
@@ -133,7 +165,7 @@ async function settlePost(
 
   if (winningSide === 'tie') {
     // 동률: 로그인 참여자 전원 균등 분배
-    const perPerson = parseFloat((C / loggedIn.length).toFixed(2));
+    const perPerson = Math.round(C / loggedIn.length);
     for (const v of loggedIn) {
       if (v.user_id) {
         creditRows.push({ user_id: v.user_id, amount: perPerson, reason: 'vote_win', post_id: post.id });
@@ -187,8 +219,8 @@ async function settlePost(
 
     for (const { user_id, score } of scores) {
       const amount = totalScore > 0
-        ? parseFloat((C * score / totalScore).toFixed(2))
-        : parseFloat((C / winnerIds.length).toFixed(2));
+        ? Math.round(C * score / totalScore)
+        : Math.round(C / winnerIds.length);
       if (amount > 0) {
         creditRows.push({ user_id, amount, reason: 'vote_win', post_id: post.id });
       }
@@ -211,4 +243,24 @@ async function settlePost(
     .from('post_results')
     .update({ credits_paid: true })
     .eq('post_id', post.id);
+
+  // ── 9. 투표 종료 알림 삽입 ──────────────────────────────────────
+  // 로그인 투표자(user_id NOT NULL)에게만 발송
+  const voterIds = [...new Set(
+    allVotes
+      .filter((v: { user_id: string | null }) => v.user_id !== null)
+      .map((v: { user_id: string }) => v.user_id)
+  )];
+
+  if (voterIds.length > 0) {
+    const notifRows = voterIds.map((uid: string) => ({
+      user_id: uid,
+      type:    'vote_ended',
+      post_id: post.id,
+      is_read: false,
+    }));
+    try {
+      await supabase.from('notifications').insert(notifRows);
+    } catch (_) { /* 알림 실패가 정산을 막지 않음 */ }
+  }
 }
