@@ -24,6 +24,10 @@ async function signUpWithEmail(email, password) {
     },
   });
   if (error) throw error;
+  // Supabase returns user with empty identities for already-registered emails
+  if (data.user && data.user.identities?.length === 0) {
+    throw new Error('already registered');
+  }
   return data;
 }
 
