@@ -20,6 +20,7 @@ async function init() {
     return;
   }
 
+  document.getElementById('profileSetupWrap').style.visibility = '';
   initNavbar();
   initAvatarUpload();
   initForm();
