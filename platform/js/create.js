@@ -8,6 +8,8 @@ let currentUser      = null;
 let thumbnailFile    = null;        // 퀴즈/테스트 썸네일
 let currentQuizType  = 'ox';        // ox | multiple | short | subjective
 let communityImages  = [];          // 커뮤니티 드래그앤드롭 이미지 배열
+let communityObjectUrls = [];       // 커뮤니티 이미지 object URL 추적 (메모리 누수 방지)
+let questionObjectUrls  = [];       // 퀴즈 문항 이미지 object URL 추적 (메모리 누수 방지)
 let selectedDays     = 3;           // [BALANCE:GAME_MAX_DAYS] 밸런스게임 기간 (기본 3일, 최대 7일) → docs/balance.md 참고
 
 // [BALANCE:GAME_CREATE_BASE] 기본 비용: 3일 = 20 크레딧
@@ -283,8 +285,12 @@ function handleCommunityFiles(files) {
 function renderCommunityPreview() {
   const preview = document.getElementById('communityImgPreview');
   if (!preview) return;
+  // 이전 object URL 해제 (메모리 누수 방지)
+  communityObjectUrls.forEach(u => URL.revokeObjectURL(u));
+  communityObjectUrls = [];
   preview.innerHTML = communityImages.map((f, i) => {
     const url = URL.createObjectURL(f);
+    communityObjectUrls.push(url);
     return `<div class="img-preview-item">
       <img src="${escapeHtml(url)}" alt="">
       <button type="button" class="img-preview-remove" data-idx="${i}" aria-label="삭제">×</button>
@@ -358,6 +364,9 @@ function buildEmptyQuestion() {
 function renderQuestionList() {
   const list = document.getElementById('questionList');
   if (!list) return;
+  // 이전 문항 이미지 object URL 해제 (메모리 누수 방지)
+  questionObjectUrls.forEach(u => URL.revokeObjectURL(u));
+  questionObjectUrls = [];
   if (!questions.length) { list.innerHTML = ''; return; }
   list.innerHTML = questions.map((q, i) => buildQuestionCardHTML(q, i)).join('');
 }
@@ -365,7 +374,9 @@ function renderQuestionList() {
 function buildQuestionCardHTML(q, i) {
   const num     = `문제 ${i + 1}`;
   const content = buildQuestionContent(q, i);
-  const imgUrl  = q.imageFile ? escapeHtml(URL.createObjectURL(q.imageFile)) : '';
+  const rawImgUrl = q.imageFile ? URL.createObjectURL(q.imageFile) : '';
+  if (rawImgUrl) questionObjectUrls.push(rawImgUrl);
+  const imgUrl  = rawImgUrl ? escapeHtml(rawImgUrl) : '';
   const imgSection = imgUrl
     ? `<div class="question-img-thumb">
          <img src="${imgUrl}" alt="">
@@ -552,6 +563,8 @@ async function handleSubmit(e) {
     alert('요청 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요.');
   }, 30000);
 
+  const resetBtn = () => { clearTimeout(timeoutId); btn.disabled = false; btn.textContent = '게시하기'; };
+
   try {
     const title    = document.getElementById('titleInput').value.trim();
     const category = document.getElementById('categorySelect').value;
@@ -569,7 +582,6 @@ async function handleSubmit(e) {
 
     // 퀴즈 검증
     if (category === '퀴즈') {
-      const resetBtn = () => { clearTimeout(timeoutId); btn.disabled = false; btn.textContent = '게시하기'; };
       if (!questions.length) {
         alert('문제를 최소 1개 이상 추가해주세요.');
         resetBtn(); return;
@@ -627,6 +639,7 @@ async function handleSubmit(e) {
         .maybeSingle();
       const balance = Number(balData?.balance ?? 0);
       if (balance < requiredCredits) {
+        clearTimeout(timeoutId);
         alert(`크레딧이 부족합니다. ${selectedDays}일 게임 생성에 ${requiredCredits} 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
         resetBtn(); return;
       }
@@ -640,6 +653,7 @@ async function handleSubmit(e) {
         .maybeSingle();
       const balance = Number(balData?.balance ?? 0);
       if (balance < cost) {
+        clearTimeout(timeoutId);
         alert(`크레딧이 부족합니다. ${category} 생성에 ${cost} 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
         resetBtn(); return;
       }

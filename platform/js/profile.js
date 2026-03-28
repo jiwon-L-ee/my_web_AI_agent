@@ -2,6 +2,8 @@
 
 let currentUser = null;
 const profileId = new URLSearchParams(location.search).get('id');
+const _UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+if (profileId && !_UUID_RE.test(profileId)) { location.href = 'index.html'; }
 
 async function init() {
   if (!profileId) { location.href = 'index.html'; return; }
@@ -9,8 +11,7 @@ async function init() {
   currentUser = await getUser();
   initAuth();
 
-  await loadProfile();
-  await loadUserPosts();
+  await Promise.all([loadProfile(), loadUserPosts()]);
 }
 
 async function loadProfile() {
@@ -48,7 +49,9 @@ async function loadProfile() {
     db.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', profileId),
   ]);
   document.getElementById('statPosts').textContent = postsRes.count ?? 0;
-  document.getElementById('statFollowers').textContent = followersRes.count ?? 0;
+  const followersEl = document.getElementById('statFollowers');
+  followersEl.textContent = followersRes.count ?? 0;
+  followersEl.dataset.raw = followersRes.count ?? 0;  // 원시값 보존 (fmtNum 포맷 파싱 오류 방지)
   document.getElementById('statFollowing').textContent = followingRes.count ?? 0;
 
   // Follow button
@@ -76,8 +79,11 @@ async function loadProfile() {
         isFollowing = true;
       }
       updateFollowBtn(followBtn, isFollowing);
-      const cnt = parseInt(document.getElementById('statFollowers').textContent);
-      document.getElementById('statFollowers').textContent = isFollowing ? cnt + 1 : Math.max(0, cnt - 1);
+      const followersEl2 = document.getElementById('statFollowers');
+      const cnt = parseInt(followersEl2.dataset.raw ?? '0', 10);
+      const newCnt = isFollowing ? cnt + 1 : Math.max(0, cnt - 1);
+      followersEl2.dataset.raw = newCnt;
+      followersEl2.textContent = newCnt;
     });
   }
 

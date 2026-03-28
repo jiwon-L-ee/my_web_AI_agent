@@ -7,10 +7,7 @@ async function init() {
   if (!currentUser) return;
   initAuth();
 
-  await loadProfile();
-  await loadStats();
-  await loadCredits();
-  await loadMyPosts();
+  await Promise.all([loadProfile(), loadStats(), loadCredits(), loadMyPosts()]);
 
   document.getElementById('editProfileBtn').addEventListener('click', openEditModal);
   document.getElementById('modalCancelBtn').addEventListener('click', closeEditModal);

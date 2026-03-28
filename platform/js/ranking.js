@@ -102,7 +102,9 @@ function renderTable() {
           <div class="rank-user">
             ${avatarHtml}
             <div>
-              <a class="rank-username" href="profile.html?id=${escapeHtml(u.user_id)}">${escapeHtml(u.username || '알 수 없음')}</a>
+              ${u.is_admin
+                ? `<span class="rank-username">${escapeHtml(u.username || '알 수 없음')}</span>`
+                : `<a class="rank-username" href="profile.html?id=${escapeHtml(u.user_id)}">${escapeHtml(u.username || '알 수 없음')}</a>`}
               ${subStats}
             </div>
           </div>

@@ -46,7 +46,7 @@ async function init() {
 
   if (!questions.length) {
     document.getElementById('quizMain').innerHTML =
-      '<div class="quiz-empty"><p style="font-size:2rem">📭</p><p>등록된 문제가 없습니다.</p></div>';
+      '<div class="quiz-empty"><p><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></p><p>등록된 문제가 없습니다.</p></div>';
     document.getElementById('quizMain').style.display = '';
     return;
   }
@@ -286,7 +286,7 @@ function showFeedbackSubjective(modelAnswers) {
   feedback.style.display = '';
   feedback.className = 'answer-feedback subjective-reveal';
 
-  document.getElementById('feedbackIcon').textContent = '📝';
+  document.getElementById('feedbackIcon').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>';
   document.getElementById('feedbackText').textContent  = '모범답안';
 
   if (modelAnswers.length) {
