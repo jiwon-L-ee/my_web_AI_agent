@@ -47,7 +47,7 @@ async function loadRanking() {
   try {
     const { data, error } = await db.rpc('get_ranking_stats');
     if (error) throw error;
-    allStats = data || [];
+    allStats = (data || []).filter(u => !u.is_admin);
     renderTable();
     updateMyRankBanner();
   } catch (err) {

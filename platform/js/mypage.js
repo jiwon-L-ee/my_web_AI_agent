@@ -1,6 +1,10 @@
 // mypage.js — authenticated user's own page
 
 let currentUser = null;
+let currentAvatarUrl = null;  // 현재 저장된 아바타 URL
+let avatarFile = null;        // 새로 선택한 파일
+let removeAvatar = false;     // 아바타 삭제 플래그
+let avatarObjectUrl = null;   // 미리보기용 object URL
 
 async function init() {
   currentUser = await requireAuth();
@@ -13,6 +17,37 @@ async function init() {
   document.getElementById('modalCancelBtn').addEventListener('click', closeEditModal);
   document.getElementById('editProfileForm').addEventListener('submit', saveProfile);
   document.getElementById('signOutBtn').addEventListener('click', signOut);
+
+  // 아바타 파일 선택
+  document.getElementById('editAvatarInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    avatarFile = file;
+    removeAvatar = false;
+    if (avatarObjectUrl) URL.revokeObjectURL(avatarObjectUrl);
+    avatarObjectUrl = URL.createObjectURL(file);
+    document.getElementById('editAvatarPreview').src = avatarObjectUrl;
+    document.getElementById('editAvatarPreview').style.display = '';
+    document.getElementById('editAvatarPlaceholder').style.display = 'none';
+  });
+
+  // 아바타 삭제
+  document.getElementById('removeAvatarBtn').addEventListener('click', () => {
+    avatarFile = null;
+    removeAvatar = true;
+    if (avatarObjectUrl) { URL.revokeObjectURL(avatarObjectUrl); avatarObjectUrl = null; }
+    document.getElementById('editAvatarPreview').src = '';
+    document.getElementById('editAvatarPreview').style.display = 'none';
+    const ph = document.getElementById('editAvatarPlaceholder');
+    ph.textContent = (document.getElementById('editUsername').value.trim() || document.getElementById('profileName').textContent || '?')[0].toUpperCase();
+    ph.style.display = 'flex';
+  });
+
+  // 닉네임 입력 시 중복 메시지 초기화
+  document.getElementById('editUsername').addEventListener('input', () => {
+    document.getElementById('usernameMsg').textContent = '';
+    document.getElementById('usernameMsg').style.color = '';
+  });
 
   // 이벤트 위임 — 게시물 삭제 버튼
   document.getElementById('myPostsGrid').addEventListener('click', e => {
@@ -27,6 +62,8 @@ async function init() {
 async function loadProfile() {
   const { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
   if (!data) return;
+
+  currentAvatarUrl = data.avatar_url ?? null;
 
   const avatarEl = document.getElementById('profileAvatar');
   if (data.avatar_url) {
@@ -143,6 +180,26 @@ async function deletePost(id, btn) {
 }
 
 function openEditModal() {
+  // 아바타 상태 초기화
+  avatarFile = null;
+  removeAvatar = false;
+  if (avatarObjectUrl) { URL.revokeObjectURL(avatarObjectUrl); avatarObjectUrl = null; }
+  document.getElementById('editAvatarInput').value = '';
+  document.getElementById('usernameMsg').textContent = '';
+
+  const preview = document.getElementById('editAvatarPreview');
+  const placeholder = document.getElementById('editAvatarPlaceholder');
+  if (currentAvatarUrl) {
+    preview.src = currentAvatarUrl;
+    preview.style.display = '';
+    placeholder.style.display = 'none';
+  } else {
+    preview.src = '';
+    preview.style.display = 'none';
+    placeholder.textContent = (document.getElementById('profileName').textContent || '?')[0].toUpperCase();
+    placeholder.style.display = 'flex';
+  }
+
   document.getElementById('editModal').style.display = '';
 }
 function closeEditModal() {
@@ -153,20 +210,76 @@ async function saveProfile(e) {
   e.preventDefault();
   const btn = document.getElementById('saveProfileBtn');
   btn.disabled = true;
+  btn.textContent = '저장 중...';
 
   const username = document.getElementById('editUsername').value.trim();
   const bio = document.getElementById('editBio').value.trim();
+  const usernameMsg = document.getElementById('usernameMsg');
 
-  const { error } = await db.from('profiles').update({ username, bio }).eq('id', currentUser.id);
+  // 닉네임 중복 확인
+  const { data: existing } = await db.from('profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', currentUser.id)
+    .maybeSingle();
+
+  if (existing) {
+    usernameMsg.textContent = '이미 사용 중인 닉네임입니다.';
+    usernameMsg.style.color = 'var(--accent)';
+    btn.disabled = false;
+    btn.textContent = '저장';
+    return;
+  }
+
+  // 아바타 처리
+  let newAvatarUrl = currentAvatarUrl;
+
+  if (removeAvatar) {
+    newAvatarUrl = null;
+  } else if (avatarFile) {
+    const ext = avatarFile.name.split('.').pop().toLowerCase();
+    const path = `${currentUser.id}/avatar/avatar.${ext}`;
+    const { error: upErr } = await db.storage.from('thumbnails').upload(path, avatarFile, { upsert: true });
+    if (upErr) {
+      alert('프로필 사진 업로드에 실패했습니다.');
+      btn.disabled = false;
+      btn.textContent = '저장';
+      return;
+    }
+    const { data: urlData } = db.storage.from('thumbnails').getPublicUrl(path);
+    newAvatarUrl = urlData.publicUrl;
+  }
+
+  const { error } = await db.from('profiles')
+    .update({ username, bio, avatar_url: newAvatarUrl })
+    .eq('id', currentUser.id);
+
   if (error) {
     alert('저장에 실패했습니다. 다시 시도해주세요.');
   } else {
+    currentAvatarUrl = newAvatarUrl;
     closeEditModal();
+
+    // 프로필 배너 업데이트
     document.getElementById('profileName').textContent = username || '이름 없음';
     document.getElementById('profileBio').textContent = bio || '자기소개를 입력해주세요.';
+
+    const avatarEl = document.getElementById('profileAvatar');
+    const placeholderEl = document.getElementById('profileAvatarPlaceholder');
+    if (newAvatarUrl) {
+      avatarEl.src = newAvatarUrl;
+      avatarEl.style.display = '';
+      placeholderEl.style.display = 'none';
+    } else {
+      avatarEl.src = '';
+      avatarEl.style.display = 'none';
+      placeholderEl.textContent = (username || '?')[0].toUpperCase();
+      placeholderEl.style.display = 'flex';
+    }
   }
 
   btn.disabled = false;
+  btn.textContent = '저장';
 }
 
 // ── 크레딧 잔액 & 이력 ───────────────────────────────────────────
