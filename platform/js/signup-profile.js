@@ -9,7 +9,7 @@ async function init() {
   if (!currentUser) return;
 
   // 이미 프로필 설정 완료한 유저는 홈으로
-  const { data: profile } = await db
+  const { data: profile, error: profileErr } = await db
     .from('profiles')
     .select('profile_completed')
     .eq('id', currentUser.id)
@@ -20,6 +20,7 @@ async function init() {
     return;
   }
 
+  // 쿼리 실패해도 폼은 보여줌
   document.getElementById('profileSetupWrap').style.visibility = '';
   initNavbar();
   initAvatarUpload();

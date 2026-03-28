@@ -628,8 +628,7 @@ async function handleSubmit(e) {
       const balance = Number(balData?.balance ?? 0);
       if (balance < requiredCredits) {
         alert(`크레딧이 부족합니다. ${selectedDays}일 게임 생성에 ${requiredCredits} 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
-        btn.disabled = false; btn.textContent = '게시하기';
-        return;
+        resetBtn(); return;
       }
     }
 
@@ -642,8 +641,7 @@ async function handleSubmit(e) {
       const balance = Number(balData?.balance ?? 0);
       if (balance < cost) {
         alert(`크레딧이 부족합니다. ${category} 생성에 ${cost} 크레딧이 필요합니다. (현재: ${Math.floor(balance)} 크레딧)`);
-        btn.disabled = false; btn.textContent = '게시하기';
-        return;
+        resetBtn(); return;
       }
     }
 
