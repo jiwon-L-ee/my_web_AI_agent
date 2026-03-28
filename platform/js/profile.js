@@ -20,7 +20,7 @@ async function loadProfile() {
     .eq('id', profileId)
     .single();
 
-  if (error || !data) {
+  if (error || !data || data.is_admin) {
     document.getElementById('profileLoading').style.display = 'none';
     document.getElementById('profileContent').innerHTML = '<p style="text-align:center;padding:60px;color:var(--text-muted)">프로필을 찾을 수 없습니다.</p>';
     document.getElementById('profileContent').style.display = '';
