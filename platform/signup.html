@@ -386,8 +386,16 @@
     btn.disabled = true;
     btn.textContent = '처리 중...';
     try {
+      const { data: emailExists } = await db.rpc('check_email_registered', { p_email: email });
+      if (emailExists) {
+        msg.textContent = '이미 가입된 이메일입니다. 로그인 페이지를 이용해주세요.';
+        msg.className = 'auth-msg error';
+        btn.disabled = false;
+        btn.textContent = '가입하기';
+        return;
+      }
       await signUpWithEmail(email, password);
-      msg.textContent = '인증 이메일을 발송했습니다. 받은편지함을 확인해주세요. 이미 가입된 이메일이라면 로그인 페이지를 이용해주세요.';
+      msg.textContent = '인증 이메일을 발송했습니다. 받은편지함을 확인해주세요.';
       msg.className = 'auth-msg success';
       document.getElementById('signupForm').reset();
       checkboxes.forEach(cid => { document.getElementById(cid).checked = false; });
