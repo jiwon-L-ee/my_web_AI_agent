@@ -1064,9 +1064,10 @@ a.comment-author-link:hover {
   z-index: 200;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.25s ease, visibility 0.25s;
 }
-.nav-overlay.open { opacity: 1; visibility: visible; }
+.nav-overlay.open { opacity: 1; visibility: visible; pointer-events: auto; }
 
 /* ── 사이드 드로어 패널 ── */
 .nav-drawer {
@@ -1186,6 +1187,10 @@ body.light-mode .nav-drawer-theme-btn .theme-icon-dark { display: none; }
   .nav-cats { display: none !important; }
   .nav-center { display: none !important; }
   .cat-select-mobile { display: none !important; }
+  /* 모바일 nav 정리: 크레딧 배지 숨김 (공간 절약) */
+  .nav-credit { display: none !important; }
+  /* 알림 드롭다운 모바일 위치 보정 */
+  .notif-dropdown { right: -60px; width: 290px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .post-title { font-size: 1.3rem; }
   .form-card { padding: 20px; }
