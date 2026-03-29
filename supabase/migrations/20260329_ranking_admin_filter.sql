@@ -62,6 +62,7 @@ AS $$
     GROUP BY following_id
   ) f ON f.user_id = p.id
   WHERE p.username IS NOT NULL
+    AND COALESCE(p.is_admin, false) = false
   ORDER BY overall_score DESC;
 $$;
 
